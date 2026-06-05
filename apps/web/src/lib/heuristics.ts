@@ -13,6 +13,16 @@ export interface Heuristic {
   plain: string;
   how: string; // where the number comes from
   anchor: string; // how the raw measurement maps to 0–100
+  rawMin: number; // 0-score real value
+  rawMax: number; // 100-score real value
+  unit: string; // real-value unit/suffix
+}
+
+/** Convert a 0–100 score back to an approximate real measurement for display. */
+export function formatRaw(h: Heuristic, score: number | null | undefined): string {
+  if (score == null) return 'no data';
+  const value = Math.round(h.rawMin + (score / 100) * (h.rawMax - h.rawMin));
+  return h.key === 'density' ? `~${value} ${h.unit}` : `${value} ${h.unit}`;
 }
 
 export const HEURISTICS: Heuristic[] = [
@@ -25,6 +35,9 @@ export const HEURISTICS: Heuristic[] = [
     plain: 'How loud a place is. Traffic and busy streets make it noisier.',
     how: 'Estimated from how close the area sits to major roads.',
     anchor: 'Quiet 40 dB → 0   ·   Jackhammer 100 dB → 100',
+    rawMin: 40,
+    rawMax: 100,
+    unit: 'dB',
   },
   {
     key: 'density',
@@ -35,6 +48,9 @@ export const HEURISTICS: Heuristic[] = [
     plain: 'How packed a place gets with people and activity.',
     how: 'Counted from shops, eateries and stops nearby — more of them, more people.',
     anchor: 'Empty → 0   ·   50+ places nearby → 100',
+    rawMin: 0,
+    rawMax: 50,
+    unit: 'places',
   },
   {
     key: 'heat',
@@ -45,6 +61,9 @@ export const HEURISTICS: Heuristic[] = [
     plain: 'How hot it is. Concrete traps heat; open and green areas stay cooler.',
     how: 'Live temperature for the area.',
     anchor: 'Pleasant 25°C → 0   ·   Scorching 45°C → 100',
+    rawMin: 25,
+    rawMax: 45,
+    unit: '°C',
   },
   {
     key: 'aqi',
@@ -55,6 +74,9 @@ export const HEURISTICS: Heuristic[] = [
     plain: 'How clean or polluted the air is to breathe.',
     how: 'Live air-quality (AQI) readings.',
     anchor: 'Clean 0 → 0   ·   Hazardous 300 → 100',
+    rawMin: 0,
+    rawMax: 300,
+    unit: 'AQI',
   },
 ];
 

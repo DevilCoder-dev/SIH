@@ -2,21 +2,45 @@
 
 import { motion } from 'framer-motion';
 import { esiBand } from '@platform/shared-types';
-import { GREENERY, HEURISTICS } from '@/lib/heuristics';
+import { formatRaw, GREENERY, HEURISTICS } from '@/lib/heuristics';
 import type { StressCell } from '@/lib/api/stress';
+import { useStressCells } from '@/hooks/useStressCells';
 
 const rgba = (c: readonly number[]) => `rgb(${c[0]},${c[1]},${c[2]})`;
 
+function summarize(cell: StressCell): string {
+  const present = HEURISTICS.filter((h) => cell.scores[h.key] != null);
+  const ranked = [...present].sort(
+    (a, b) => (cell.scores[b.key] ?? 0) * b.weight - (cell.scores[a.key] ?? 0) * a.weight,
+  );
+  const drivers = ranked
+    .filter((h) => (cell.scores[h.key] ?? 0) >= 40)
+    .slice(0, 2)
+    .map((h) => h.label.toLowerCase());
+  let s = drivers.length
+    ? `Stress here is driven mainly by ${drivers.join(' and ')}.`
+    : 'This area is relatively calm across all factors.';
+  if (cell.greenery && cell.greenery > 0) s += ' Nearby greenery offsets some of it.';
+  return s;
+}
+
 export function AreaDetails({ cell }: { cell: StressCell }) {
-  const localityLabel = cell.locality ?? 'Unknown area';
+  const { data } = useStressCells();
+  const cells = data?.cells ?? [];
+  const avg = cells.length ? cells.reduce((s, c) => s + c.esi, 0) / cells.length : null;
+  const diff = avg != null ? Math.round(cell.esi - avg) : null;
 
   const band = esiBand(cell.esi);
-  const present = HEURISTICS.filter((h) => cell.scores[h.key] != null);
-  const driver = present.reduce<(typeof HEURISTICS)[number] | null>((top, h) => {
-    const contrib = (cell.scores[h.key] ?? 0) * h.weight;
-    const topContrib = top ? (cell.scores[top.key] ?? 0) * top.weight : -1;
-    return contrib > topContrib ? h : top;
-  }, null);
+  const localityLabel = cell.locality ?? 'Unknown area';
+
+  const compare =
+    diff == null
+      ? null
+      : diff > 2
+        ? `${diff} pts above the area average`
+        : diff < -2
+          ? `${Math.abs(diff)} pts below the area average`
+          : 'about the area average';
 
   return (
     <motion.div
@@ -42,25 +66,22 @@ export function AreaDetails({ cell }: { cell: StressCell }) {
         </div>
         <div>
           <p className="text-sm font-semibold text-card-foreground">{band.label} stress</p>
-          {driver && (
-            <p className="text-xs text-muted-foreground">
-              Mostly driven by <strong>{driver.label.toLowerCase()}</strong>
-              {cell.greenery && cell.greenery > 0 ? '; greenery is helping' : ''}.
-            </p>
-          )}
+          {compare && <p className="text-xs text-muted-foreground">{compare}</p>}
         </div>
       </div>
 
-      <div className="space-y-2">
+      <p className="rounded-md bg-muted/50 p-2 text-xs leading-relaxed text-muted-foreground">
+        {summarize(cell)}
+      </p>
+
+      <div className="space-y-2.5">
         {HEURISTICS.map((h) => {
           const score = cell.scores[h.key];
           return (
             <div key={h.key}>
-              <div className="flex justify-between text-xs">
+              <div className="flex items-baseline justify-between text-xs">
                 <span className="text-card-foreground">{h.label}</span>
-                <span className="text-muted-foreground">
-                  {score == null ? '—' : Math.round(score)}
-                </span>
+                <span className="font-medium text-card-foreground">{formatRaw(h, score)}</span>
               </div>
               <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-muted">
                 <motion.div
@@ -86,9 +107,9 @@ export function AreaDetails({ cell }: { cell: StressCell }) {
       )}
 
       <p className="text-[11px] leading-snug text-muted-foreground">
-        Confidence {Math.round(cell.confidence * 100)}% · noise &amp; crowding are modeled
-        estimates (no live sensors yet). Score is for this ~150&nbsp;m hexagon, not an exact
-        spot.
+        Values are estimates for this ~150&nbsp;m hexagon. Air quality &amp; heat are live;
+        noise &amp; crowding are modeled from roads &amp; places (no live sensors yet).
+        Confidence {Math.round(cell.confidence * 100)}%.
       </p>
     </motion.div>
   );

@@ -1,5 +1,7 @@
-"""Real temperature from Open-Meteo (free, no API key). One request samples a coarse grid
-over the bbox; values are IDW-interpolated to cells (temperature is spatially smooth)."""
+"""Real temperature from MET Norway (api.met.no) — free, no key, and (unlike
+api.open-meteo.com) not blocked from cloud IPs like Render. Sampled on a small grid and
+IDW-interpolated to cells (temperature is spatially smooth). MET requires a descriptive
+User-Agent per their terms of service."""
 
 from __future__ import annotations
 
@@ -10,37 +12,35 @@ import httpx
 from app.ingestion.http_retry import with_retries
 from app.ingestion.interpolate import Point
 
-OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
+MET_NO_URL = "https://api.met.no/weatherapi/locationforecast/2.0/compact"
+_HEADERS = {"User-Agent": "EvoComb/0.1 (https://github.com/aksh08022006/EvoComb)"}
 
 
 async def fetch_temperature_grid(
-    bbox: tuple[float, float, float, float], nx: int = 6, ny: int = 6
+    bbox: tuple[float, float, float, float], nx: int = 3, ny: int = 3
 ) -> list[Point]:
     """Current 2m temperature (°C) at an nx×ny grid over bbox, as (lat, lng, temp)."""
     min_lng, min_lat, max_lng, max_lat = bbox
-    lats: list[float] = []
-    lngs: list[float] = []
-    for i in range(ny):
-        for j in range(nx):
-            lats.append(round(min_lat + (max_lat - min_lat) * i / (ny - 1), 4))
-            lngs.append(round(min_lng + (max_lng - min_lng) * j / (nx - 1), 4))
+    points: list[Point] = []
 
-    params = {
-        "latitude": ",".join(str(x) for x in lats),
-        "longitude": ",".join(str(x) for x in lngs),
-        "current": "temperature_2m",
-    }
-    async def _call() -> Any:
-        async with httpx.AsyncClient(timeout=20) as client:
-            resp = await client.get(OPEN_METEO_URL, params=params)
-            resp.raise_for_status()
-            return resp.json()
+    async with httpx.AsyncClient(timeout=20, headers=_HEADERS) as client:
+        for i in range(ny):
+            for j in range(nx):
+                lat = round(min_lat + (max_lat - min_lat) * i / (ny - 1), 4)
+                lng = round(min_lng + (max_lng - min_lng) * j / (nx - 1), 4)
 
-    data = await with_retries(_call)
+                async def _call(lat: float = lat, lng: float = lng) -> Any:
+                    resp = await client.get(MET_NO_URL, params={"lat": lat, "lon": lng})
+                    resp.raise_for_status()
+                    return resp.json()
 
-    # Multi-location responses come back as a list; a single location as an object.
-    items = data if isinstance(data, list) else [data]
-    return [
-        (float(it["latitude"]), float(it["longitude"]), float(it["current"]["temperature_2m"]))
-        for it in items
-    ]
+                try:
+                    data = await with_retries(_call)
+                    temp = data["properties"]["timeseries"][0]["data"]["instant"]["details"][
+                        "air_temperature"
+                    ]
+                    points.append((lat, lng, float(temp)))
+                except Exception:
+                    continue  # skip a failed point; IDW handles gaps
+
+    return points
