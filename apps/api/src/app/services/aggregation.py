@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -125,5 +125,7 @@ async def recompute_cells(
             set_={c: insert_stmt.excluded[c] for c in update_columns},
         )
         await session.execute(upsert)
+    # Keep only the newest bucket so the serving table stays small and fast.
+    await session.execute(delete(StressCell).where(StressCell.bucket < bucket))
     await session.commit()
     return len(rows)
