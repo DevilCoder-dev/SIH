@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     api_env: str = "development"
     api_log_level: str = "INFO"
     api_cors_origins: str = "http://localhost:3000"
+    # Regex for additional allowed origins — defaults to any Vercel deployment.
+    api_cors_origin_regex: str = r"https://([a-z0-9-]+\.)*vercel\.app"
 
     # Token guarding the manual data-refresh endpoint (POST /api/v1/admin/ingest).
     ingest_token: str = ""
