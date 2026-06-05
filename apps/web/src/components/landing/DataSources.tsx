@@ -44,6 +44,19 @@ export function DataSources() {
           </RevealItem>
         ))}
       </RevealGroup>
+
+      <Reveal className="mt-6">
+        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5">
+          <p className="text-sm font-semibold text-white">How fresh is the data?</p>
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-white/60">
+            EvoComb serves periodic <span className="text-white/80">snapshots</span>, refreshed on a
+            schedule (target: every few hours). <span className="text-white/80">Air quality and heat</span>{' '}
+            shift through the day, while noise, crowding and greenery are structural and change
+            slowly. It is <span className="text-white/80">not yet a real-time sensor feed</span> —
+            live ESP32 streaming over MQTT/WebSockets is on the roadmap.
+          </p>
+        </div>
+      </Reveal>
     </Section>
   );
 }
