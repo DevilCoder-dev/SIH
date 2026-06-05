@@ -2,6 +2,7 @@ import { MapView } from '@/components/map/MapView';
 import { MapChrome } from '@/components/layout/MapChrome';
 import { Legend } from '@/components/layout/Legend';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { SplashScreen } from '@/components/layout/SplashScreen';
 
 // Map-first: the root route is the map. UI chrome floats above it.
 export default function HomePage() {
@@ -11,6 +12,7 @@ export default function HomePage() {
       <MapChrome />
       <Legend />
       <Sidebar />
+      <SplashScreen />
     </main>
   );
 }
