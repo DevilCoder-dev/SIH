@@ -14,6 +14,7 @@ city structure — not a synthetic gradient.
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Awaitable
 from datetime import UTC, datetime
 
@@ -81,12 +82,16 @@ async def _coverage_cells() -> list[str]:
 async def ingest_real(session: AsyncSession, now: datetime | None = None) -> dict[str, object]:
     now = now or datetime.now(UTC)
 
-    temps = await _safe(fetch_temperature_grid(DELHI_BBOX), [], "open_meteo_temp")
-    aqis = await _safe(fetch_aqi_grid(DELHI_BBOX), [], "open_meteo_aqi")
-    poi_counts = await _safe(fetch_poi_counts_by_cell(DELHI_BBOX, H3_RESOLUTION), {}, "osm_pois")
-    green_polys = await _safe(fetch_green_polygons(DELHI_BBOX), [], "osm_green")
-    road_lines = await _safe(fetch_road_lines(DELHI_BBOX), [], "osm_roads")
-    places = await _safe(fetch_place_points(DELHI_BBOX), [], "osm_places")
+    # Fetch all sources concurrently so total time ≈ the slowest source (not the sum of
+    # all retry/backoff waits) — important on throttled cloud IPs like Render's.
+    temps, aqis, poi_counts, green_polys, road_lines, places = await asyncio.gather(
+        _safe(fetch_temperature_grid(DELHI_BBOX), [], "met_no_temp"),
+        _safe(fetch_aqi_grid(DELHI_BBOX), [], "open_meteo_aqi"),
+        _safe(fetch_poi_counts_by_cell(DELHI_BBOX, H3_RESOLUTION), {}, "osm_pois"),
+        _safe(fetch_green_polygons(DELHI_BBOX), [], "osm_green"),
+        _safe(fetch_road_lines(DELHI_BBOX), [], "osm_roads"),
+        _safe(fetch_place_points(DELHI_BBOX), [], "osm_places"),
+    )
     log.info(
         "fetched_sources",
         temp=len(temps),
