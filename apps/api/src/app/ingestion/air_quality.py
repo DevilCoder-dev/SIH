@@ -4,8 +4,11 @@ alternative when a token is configured.)"""
 
 from __future__ import annotations
 
+from typing import Any
+
 import httpx
 
+from app.ingestion.http_retry import with_retries
 from app.ingestion.interpolate import Point
 
 OPEN_METEO_AQ_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
@@ -28,10 +31,13 @@ async def fetch_aqi_grid(
         "longitude": ",".join(str(x) for x in lngs),
         "current": "us_aqi",
     }
-    async with httpx.AsyncClient(timeout=20) as client:
-        resp = await client.get(OPEN_METEO_AQ_URL, params=params)
-        resp.raise_for_status()
-        data = resp.json()
+    async def _call() -> Any:
+        async with httpx.AsyncClient(timeout=20) as client:
+            resp = await client.get(OPEN_METEO_AQ_URL, params=params)
+            resp.raise_for_status()
+            return resp.json()
+
+    data = await with_retries(_call)
 
     items = data if isinstance(data, list) else [data]
     out: list[Point] = []

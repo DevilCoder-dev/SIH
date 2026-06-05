@@ -3,8 +3,11 @@ over the bbox; values are IDW-interpolated to cells (temperature is spatially sm
 
 from __future__ import annotations
 
+from typing import Any
+
 import httpx
 
+from app.ingestion.http_retry import with_retries
 from app.ingestion.interpolate import Point
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
@@ -27,10 +30,13 @@ async def fetch_temperature_grid(
         "longitude": ",".join(str(x) for x in lngs),
         "current": "temperature_2m",
     }
-    async with httpx.AsyncClient(timeout=20) as client:
-        resp = await client.get(OPEN_METEO_URL, params=params)
-        resp.raise_for_status()
-        data = resp.json()
+    async def _call() -> Any:
+        async with httpx.AsyncClient(timeout=20) as client:
+            resp = await client.get(OPEN_METEO_URL, params=params)
+            resp.raise_for_status()
+            return resp.json()
+
+    data = await with_retries(_call)
 
     # Multi-location responses come back as a list; a single location as an object.
     items = data if isinstance(data, list) else [data]
