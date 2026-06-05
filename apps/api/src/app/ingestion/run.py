@@ -14,8 +14,8 @@ async def _main() -> None:
     session_factory = create_session_factory(engine)
     try:
         async with session_factory() as session:
-            count = await ingest_real(session)
-        print(f"Ingested real AQI+Heat into {count} cells.")
+            result = await ingest_real(session)
+        print(f"Ingest result: {result}")
     finally:
         await engine.dispose()
 

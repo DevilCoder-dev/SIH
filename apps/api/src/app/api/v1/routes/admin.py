@@ -1,5 +1,5 @@
-"""Admin endpoint to (re)load real data over HTTP — used where a shell isn't available
-(e.g. free hosting). Runs ingestion in the background and returns immediately.
+"""Admin endpoints to (re)load real data over HTTP — used where a shell isn't available
+(e.g. free hosting). Runs ingestion in the background and exposes its status.
 
 Auth: a valid `INGEST_TOKEN` always works. As a convenience, an unauthenticated call is
 allowed ONLY when there is no data yet (first-time bootstrap); once cells exist, a token is
@@ -8,6 +8,7 @@ required to refresh.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException
@@ -24,16 +25,27 @@ from app.services.ingest import ingest_real
 router = APIRouter()
 log = get_logger("admin")
 
+# Last ingestion outcome, surfaced via GET /admin/ingest/status for remote diagnosis.
+_status: dict[str, object] = {"state": "idle"}
+
+
+def _stamp(**fields: object) -> None:
+    _status.clear()
+    _status.update(at=datetime.now(UTC).isoformat(), **fields)
+
 
 async def _run_ingest() -> None:
     if db_session.session_factory is None:
-        log.error("ingest_no_session_factory")
+        _stamp(state="failed", error="no session factory")
         return
+    _stamp(state="running")
     try:
         async with db_session.session_factory() as session:
-            count = await ingest_real(session)
-        log.info("admin_ingest_done", cells=count)
-    except Exception as exc:  # background task: log, never crash the worker
+            result = await ingest_real(session)
+        _stamp(state="done", **result)
+        log.info("admin_ingest_done", **result)
+    except Exception as exc:  # background task: record, never crash the worker
+        _stamp(state="failed", error=str(exc))
         log.error("admin_ingest_failed", error=str(exc))
 
 
@@ -51,3 +63,8 @@ async def trigger_ingest(
             raise HTTPException(403, "data already loaded; valid token required to refresh")
     background.add_task(_run_ingest)
     return {"status": "ingestion started"}
+
+
+@router.get("/admin/ingest/status")
+async def ingest_status() -> dict[str, object]:
+    return _status

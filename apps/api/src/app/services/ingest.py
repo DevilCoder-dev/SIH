@@ -14,6 +14,7 @@ city structure — not a synthetic gradient.
 
 from __future__ import annotations
 
+from collections.abc import Awaitable
 from datetime import UTC, datetime
 
 from shapely.geometry import Point
@@ -43,6 +44,15 @@ log = get_logger("ingest")
 
 _REPLACED_SOURCES = ("simulator", "waqi", "open_meteo", "osm")
 
+async def _safe[T](coro: Awaitable[T], default: T, label: str) -> T:
+    """Run a source fetch; on failure log and return a default so one flaky/blocked source
+    (e.g. Overpass refusing a cloud IP) doesn't sink the whole ingest."""
+    try:
+        return await coro
+    except Exception as exc:  # resilience: one blocked source shouldn't sink the ingest
+        log.warning("source_failed", source=label, error=str(exc))
+        return default
+
 
 def _reading(now: datetime, cell: str, metric: str, value: float, source: str) -> dict[str, object]:
     return {
@@ -68,15 +78,15 @@ async def _coverage_cells() -> list[str]:
     return cells
 
 
-async def ingest_real(session: AsyncSession, now: datetime | None = None) -> int:
+async def ingest_real(session: AsyncSession, now: datetime | None = None) -> dict[str, object]:
     now = now or datetime.now(UTC)
 
-    temps = await fetch_temperature_grid(DELHI_BBOX)
-    aqis = await fetch_aqi_grid(DELHI_BBOX)
-    poi_counts = await fetch_poi_counts_by_cell(DELHI_BBOX, H3_RESOLUTION)
-    green_polys = await fetch_green_polygons(DELHI_BBOX)
-    road_lines = await fetch_road_lines(DELHI_BBOX)
-    places = await fetch_place_points(DELHI_BBOX)
+    temps = await _safe(fetch_temperature_grid(DELHI_BBOX), [], "open_meteo_temp")
+    aqis = await _safe(fetch_aqi_grid(DELHI_BBOX), [], "open_meteo_aqi")
+    poi_counts = await _safe(fetch_poi_counts_by_cell(DELHI_BBOX, H3_RESOLUTION), {}, "osm_pois")
+    green_polys = await _safe(fetch_green_polygons(DELHI_BBOX), [], "osm_green")
+    road_lines = await _safe(fetch_road_lines(DELHI_BBOX), [], "osm_roads")
+    places = await _safe(fetch_place_points(DELHI_BBOX), [], "osm_places")
     log.info(
         "fetched_sources",
         temp=len(temps),
@@ -119,5 +129,13 @@ async def ingest_real(session: AsyncSession, now: datetime | None = None) -> int
     cell_count = await recompute_cells(
         session, now, green_factors=green_factors, localities=localities
     )
-    log.info("ingest_complete", readings=len(rows), stress_cells=cell_count)
-    return cell_count
+    sources = {
+        "temp": len(temps),
+        "aqi": len(aqis),
+        "poi_cells": len(poi_counts),
+        "green": len(green_polys),
+        "roads": len(road_lines),
+        "places": len(places),
+    }
+    log.info("ingest_complete", readings=len(rows), stress_cells=cell_count, **sources)
+    return {"cells": cell_count, "sources": sources}
