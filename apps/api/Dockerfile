@@ -30,9 +30,11 @@ COPY --from=builder /opt/venv /opt/venv
 COPY --from=builder /app/src /app/src
 COPY --from=builder /app/alembic.ini /app/alembic.ini
 COPY --from=builder /app/migrations /app/migrations
+COPY --from=builder /app/start.sh /app/start.sh
 
 # PYTHONPATH so `app` is importable from src/ without an install step at runtime.
 ENV PYTHONPATH=/app/src
 
 EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Runs migrations then serves on $PORT (set by the host; 8000 locally).
+CMD ["sh", "/app/start.sh"]

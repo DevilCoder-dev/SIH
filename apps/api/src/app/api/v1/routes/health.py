@@ -39,7 +39,9 @@ async def readiness(request: Request) -> ReadinessResponse:
         redis_ok = False
 
     deps = DependencyStatus(database=db_ok, redis=redis_ok)
+    # The DB is the only hard dependency for serving the heatmap; Redis is optional
+    # (caching/realtime) and reported for information only.
     return ReadinessResponse(
-        status="ready" if (db_ok and redis_ok) else "degraded",
+        status="ready" if db_ok else "degraded",
         dependencies=deps,
     )
