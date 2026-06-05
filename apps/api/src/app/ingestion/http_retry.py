@@ -7,7 +7,9 @@ import asyncio
 from collections.abc import Awaitable, Callable
 
 
-async def with_retries[T](make: Callable[[], Awaitable[T]], attempts: int = 3, base: float = 2.0) -> T:
+async def with_retries[T](
+    make: Callable[[], Awaitable[T]], attempts: int = 3, base: float = 2.0
+) -> T:
     last: Exception | None = None
     for i in range(attempts):
         try:
