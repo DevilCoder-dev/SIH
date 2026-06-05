@@ -8,7 +8,7 @@ platform grows.
 
 from functools import lru_cache
 
-from pydantic import computed_field
+from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     postgres_db: str = "urban_stress"
     postgres_host: str = "localhost"
     postgres_port: int = 5432
+    # Full connection string override (e.g. an external/managed DB URL). When set, it wins
+    # over the POSTGRES_* parts and connects with SSL (for external managed Postgres).
+    database_url_override: str = Field(default="", validation_alias="DATABASE_URL")
 
     # --- Redis ---
     redis_host: str = "localhost"
@@ -54,10 +57,22 @@ class Settings(BaseSettings):
     @property
     def database_url(self) -> str:
         """Async SQLAlchemy URL (asyncpg driver)."""
+        if self.database_url_override:
+            url = (
+                self.database_url_override.replace(
+                    "postgresql://", "postgresql+asyncpg://"
+                ).replace("postgres://", "postgresql+asyncpg://")
+            )
+            return url.split("?")[0]  # drop sslmode etc.; SSL handled via connect_args
         return (
             f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
+
+    @property
+    def db_use_ssl(self) -> bool:
+        """External/managed Postgres (via DATABASE_URL) requires SSL."""
+        return bool(self.database_url_override)
 
     @computed_field  # type: ignore[prop-decorator]
     @property

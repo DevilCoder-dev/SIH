@@ -19,10 +19,12 @@ from app.core.config import get_settings
 
 def create_engine() -> AsyncEngine:
     settings = get_settings()
+    connect_args = {"ssl": True} if settings.db_use_ssl else {}
     return create_async_engine(
         settings.database_url,
         pool_pre_ping=True,
         future=True,
+        connect_args=connect_args,
     )
 
 
