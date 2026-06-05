@@ -31,20 +31,25 @@ _RECHECK_SECONDS = 60.0
 _cache: dict[str, Any] = {"bucket": None, "cells": [], "checked": 0.0}
 
 
+def _r(x: float | None, n: int) -> float | None:
+    return round(x, n) if x is not None else None
+
+
 def _to_dict(row: StressCell) -> dict[str, Any]:
+    # Rounded to shrink the payload — the map needs no more precision than this.
     return {
         "h3": row.h3_r9,
-        "lat": row.centroid_lat,
-        "lng": row.centroid_lng,
-        "esi": row.esi,
+        "lat": round(row.centroid_lat, 5),
+        "lng": round(row.centroid_lng, 5),
+        "esi": round(row.esi, 1),
         "scores": {
-            "noise": row.noise_score,
-            "density": row.density_score,
-            "heat": row.heat_score,
-            "aqi": row.aqi_score,
+            "noise": _r(row.noise_score, 1),
+            "density": _r(row.density_score, 1),
+            "heat": _r(row.heat_score, 1),
+            "aqi": _r(row.aqi_score, 1),
         },
-        "confidence": row.confidence,
-        "greenery": row.greenery,
+        "confidence": round(row.confidence, 3),
+        "greenery": _r(row.greenery, 2),
         "locality": row.locality,
         "updated_at": row.updated_at,
     }
