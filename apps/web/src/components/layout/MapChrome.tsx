@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 import { HelpCircle } from 'lucide-react';
 import { MAP_LAYER_IDS } from '@platform/shared-types';
 import { Button } from '@/components/ui/button';
@@ -21,7 +22,12 @@ export function MapChrome() {
       className="pointer-events-none absolute left-4 top-4 z-10"
     >
       <div className="pointer-events-auto rounded-lg border bg-card/90 px-4 py-3 shadow-sm backdrop-blur">
-        <p className="text-sm font-semibold text-card-foreground">EvoComb</p>
+        <Link
+          href="/"
+          className="text-sm font-semibold text-card-foreground hover:underline"
+        >
+          ← EvoComb
+        </Link>
         <p className="text-xs text-muted-foreground">
           Urban environmental stress · Delhi NCR
         </p>

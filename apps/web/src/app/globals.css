@@ -75,9 +75,8 @@
     color: var(--color-foreground);
     margin: 0;
   }
-  /* The map is the primary interface — it owns the full viewport. */
+  /* Pages render in normal (scrollable) flow; the map page pins itself to the viewport. */
   #app-root {
-    position: fixed;
-    inset: 0;
+    min-height: 100vh;
   }
 }
