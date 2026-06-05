@@ -23,6 +23,10 @@ services:
       # Update this to your Vercel URL after the web app is deployed.
       - key: API_CORS_ORIGINS
         value: https://evocomb.vercel.app
+      # Guards POST /api/v1/admin/ingest (lets us load data without a shell).
+      # Render generates this secret; read it from the service's Environment tab.
+      - key: INGEST_TOKEN
+        generateValue: true
       # DB connection is injected from the managed Postgres above.
       - key: POSTGRES_HOST
         fromDatabase:

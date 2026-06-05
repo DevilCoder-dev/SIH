@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     api_log_level: str = "INFO"
     api_cors_origins: str = "http://localhost:3000"
 
+    # Token guarding the manual data-refresh endpoint (POST /api/v1/admin/ingest).
+    ingest_token: str = ""
+
     # --- External data providers (Phase 4) ---
     waqi_token: str = ""  # free token from https://aqicn.org/data-platform/token/
     # Polite identifier sent to OpenStreetMap Nominatim (reverse geocoding).
