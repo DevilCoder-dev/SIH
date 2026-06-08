@@ -13,11 +13,16 @@ jobs:
   web:
     name: Web (lint + typecheck + build)
     runs-on: ubuntu-latest
+    # `next build` prerenders pages that import the validated public env, so the build
+    # needs a syntactically valid NEXT_PUBLIC_API_URL. CI never calls the API — this is a
+    # placeholder purely to satisfy env validation; the real URL is set in Vercel.
+    env:
+      NEXT_PUBLIC_API_URL: https://api.example.com
     steps:
       - uses: actions/checkout@v4
+      # No `version:` here on purpose — pnpm/action-setup@v4 reads it from the root
+      # package.json `packageManager` field (pnpm@9.15.4). Pinning both errors out.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: 22
