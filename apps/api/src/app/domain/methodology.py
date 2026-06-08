@@ -67,13 +67,40 @@ def apply_greenery(esi: float, green_factor: float) -> float:
     return esi * (1.0 - GREENERY_RELIEF * g)
 
 
+# --- Urban heat island (UHI) proxy (methodology extension) ------------------------------
+# Ambient air temperature is spatially smooth (varies only ~1–3°C across the city), so on
+# its own it gives almost no per-cell signal and misses the urban heat island entirely.
+# We model the missing surface-heat variation: dense built-up fabric (roads, concrete, POI
+# clusters) runs hotter than its air temperature; large water bodies run cooler. The heat
+# *input* fed to `normalize_heat` is therefore the ambient temperature PLUS this offset:
+#
+#     T_heat = T_ambient + urban_heat_offset(builtup, water)
+#
+# This is a modeled proxy, not a surface-temperature measurement (hence heat's lowered base
+# confidence below). Greenery is intentionally NOT a term here — it stays the single global
+# ESI relief (`apply_greenery`) so its cooling effect is never double-counted.
+UHI_BUILTUP_MAX_C = 4.0  # fully built-up cell: up to +4°C above ambient
+UHI_WATER_COOL_C = 2.0  # cell over/at water: up to −2°C below ambient
+
+
+def urban_heat_offset(builtup: float, water: float = 0.0) -> float:
+    """Modeled urban-heat-island offset (°C) added to ambient air temperature.
+
+    `builtup` and `water` are 0–1 coverage/intensity fractions for the cell.
+    """
+    b = max(0.0, min(1.0, builtup))
+    w = max(0.0, min(1.0, water))
+    return UHI_BUILTUP_MAX_C * b - UHI_WATER_COOL_C * w
+
+
 # --- Per-metric base confidence (data quality / spatial precision) ----------------------
 # Reflects how trustworthy/precise each signal is (noise ~10-30m high; density ~20-50m
-# medium; heat coarse but reliable; AQI coarse). Used to derive per-cell confidence.
+# medium; heat now a modeled UHI proxy over coarse ambient temp; AQI coarse).
+# Used to derive per-cell confidence.
 BASE_CONFIDENCE: dict[Metric, float] = {
     Metric.NOISE: 1.0,
     Metric.DENSITY: 0.6,
-    Metric.HEAT: 0.9,
+    Metric.HEAT: 0.7,  # lowered: heat is ambient temp + a modeled built-environment offset
     Metric.AQI: 0.8,
 }
 
