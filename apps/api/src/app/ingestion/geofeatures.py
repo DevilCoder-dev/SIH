@@ -30,6 +30,22 @@ class GreenIndex:
         return 1.0 if len(hits) > 0 else 0.0
 
 
+class WaterIndex:
+    """Whether a point falls on a water body (rivers, lakes, reservoirs) — cools the heat
+    UHI proxy. Same binary-coverage approach as GreenIndex."""
+
+    def __init__(self, polygons: list[Polygon]) -> None:
+        self._polygons = polygons
+        self._tree = STRtree(polygons) if polygons else None
+
+    def factor(self, lat: float, lng: float) -> float:
+        if self._tree is None:
+            return 0.0
+        point = Point(lng, lat)
+        hits = self._tree.query(point, predicate="within")
+        return 1.0 if len(hits) > 0 else 0.0
+
+
 class PlaceIndex:
     """Nearest named locality to a point (within a max distance)."""
 

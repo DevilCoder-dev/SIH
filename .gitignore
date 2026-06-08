@@ -37,9 +37,10 @@ pnpm-debug.log*
 !.vscode/extensions.json
 *.swp
 
-# Local caches. (The NCR admin boundary under apps/api/.cache is force-added/tracked as
-# static reference data the cloud/CI ingest needs deterministically — Overpass blocks
-# shared cloud IPs — so it stays committed despite this rule.)
+# Local caches. (The NCR admin boundary + OSM feature caches under apps/api/.cache are
+# force-added/tracked as static reference data the cloud/CI ingest needs deterministically —
+# Overpass blocks shared cloud IPs — so they stay committed despite this rule. Regenerate
+# the OSM caches with `python -m app.ingestion.build_osm_cache`.)
 .cache/
 
 # Coverage

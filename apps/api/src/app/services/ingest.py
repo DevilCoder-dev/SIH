@@ -28,14 +28,9 @@ from app.db.h3_utils import cell_to_latlng
 from app.domain.methodology import H3_RESOLUTION, urban_heat_offset
 from app.ingestion.air_quality import fetch_aqi_grid
 from app.ingestion.boundary import fetch_ncr_boundary
-from app.ingestion.geofeatures import GreenIndex, PlaceIndex, RoadNoiseIndex
+from app.ingestion.geofeatures import GreenIndex, PlaceIndex, RoadNoiseIndex, WaterIndex
 from app.ingestion.interpolate import idw
-from app.ingestion.osm import (
-    fetch_green_polygons,
-    fetch_place_points,
-    fetch_poi_counts_by_cell,
-    fetch_road_lines,
-)
+from app.ingestion.osm_cache import load_or_fetch_features
 from app.ingestion.weather import fetch_temperature_grid
 from app.models.reading import Reading
 from app.services.aggregation import recompute_cells
@@ -51,6 +46,11 @@ _REPLACED_SOURCES = ("simulator", "waqi", "open_meteo", "met_no", "osm")
 _NOISE_FLOOR_DB = 42.0  # mirrors geofeatures._NOISE_FLOOR_DB (quiet baseline)
 _NOISE_AT_ROAD_DB = 80.0  # mirrors geofeatures._NOISE_AT_ROAD_DB (on a major road)
 _BUILTUP_POI_FULL = 30.0  # POIs in a res-9 cell that read as fully built-up
+
+# A cell is "urban" enough to ingest if it has any POI or sits within ~600 m of a major
+# road (noise ≥ 50 dB on the proxy scale). This drops the rural district fringe in the NCR
+# footprint — keeping the cell set honest (no data → no cell) and the payload manageable.
+_BUILTUP_MIN_NOISE_DB = 50.0
 
 
 def _builtup(noise_db: float | None, poi_count: int) -> float:
@@ -97,53 +97,65 @@ async def _coverage_cells() -> list[str]:
 async def ingest_real(session: AsyncSession, now: datetime | None = None) -> dict[str, object]:
     now = now or datetime.now(UTC)
 
-    # Fetch all sources concurrently so total time ≈ the slowest source (not the sum of
-    # all retry/backoff waits) — important on throttled cloud IPs like Render's.
-    temps, aqis, poi_counts, green_polys, road_lines, places = await asyncio.gather(
+    # Only temperature + AQI are live (fast, reliable APIs); fetch them concurrently. The
+    # static OSM features come from the committed cache (allow_fetch=False), so the hourly
+    # job never blocks on Overpass.
+    temps, aqis = await asyncio.gather(
         _safe(fetch_temperature_grid(NCR_BBOX, nx=5, ny=5), [], "met_no_temp"),
         _safe(fetch_aqi_grid(NCR_BBOX), [], "open_meteo_aqi"),
-        _safe(fetch_poi_counts_by_cell(NCR_BBOX, H3_RESOLUTION), {}, "osm_pois"),
-        _safe(fetch_green_polygons(NCR_BBOX), [], "osm_green"),
-        _safe(fetch_road_lines(NCR_BBOX), [], "osm_roads"),
-        _safe(fetch_place_points(NCR_BBOX), [], "osm_places"),
     )
+    features = await load_or_fetch_features(NCR_BBOX, H3_RESOLUTION, allow_fetch=False)
+    poi_counts = features.poi_counts
     log.info(
         "fetched_sources",
         temp=len(temps),
         aqi=len(aqis),
         poi_cells=len(poi_counts),
-        green=len(green_polys),
-        roads=len(road_lines),
-        places=len(places),
+        green=len(features.green),
+        water=len(features.water),
+        roads=len(features.roads),
+        places=len(features.places),
     )
 
-    green_idx = GreenIndex(green_polys)
-    road_idx = RoadNoiseIndex(road_lines)
-    place_idx = PlaceIndex(places)
-    cells = await _coverage_cells()
+    green_idx = GreenIndex(features.green)
+    water_idx = WaterIndex(features.water)
+    road_idx = RoadNoiseIndex(features.roads)
+    place_idx = PlaceIndex(features.places)
+    candidates = await _coverage_cells()
 
     rows: list[dict[str, object]] = []
     green_factors: dict[str, float] = {}
     localities: dict[str, str | None] = {}
-    for cell in cells:
+    kept = 0
+    for cell in candidates:
         lat, lng = cell_to_latlng(cell)
+        noise = road_idx.noise_db(lat, lng)
+        poi_count = int(poi_counts.get(cell, 0))
+
+        # Built-up clip: skip rural-fringe cells (no POIs and far from any major road).
+        near_road = noise is not None and noise >= _BUILTUP_MIN_NOISE_DB
+        if poi_count == 0 and not near_road:
+            continue
+        kept += 1
+
         ambient = idw(temps, lat, lng) if temps else None
         aqi = idw(aqis, lat, lng) if aqis else None
-        noise = road_idx.noise_db(lat, lng)
         green_factors[cell] = green_idx.factor(lat, lng)
         localities[cell] = place_idx.nearest_name(lat, lng)
 
-        # Heat = ambient air temp + modeled urban-heat-island offset from built-up density.
-        # This turns a near-flat ambient field into real per-cell variation.
+        # Heat = ambient air temp + modeled urban-heat-island offset: built-up density warms,
+        # water cools. Turns a near-flat ambient field into real per-cell variation.
         if ambient is not None:
-            builtup = _builtup(noise, int(poi_counts.get(cell, 0)))
-            heat = ambient + urban_heat_offset(builtup)
+            builtup = _builtup(noise, poi_count)
+            water = water_idx.factor(lat, lng)
+            heat = ambient + urban_heat_offset(builtup, water)
             rows.append(_reading(now, cell, "heat", heat, "met_no"))
         if aqi is not None:
             rows.append(_reading(now, cell, "aqi", aqi, "open_meteo"))
         if noise is not None:
             rows.append(_reading(now, cell, "noise", noise, "osm"))
-        rows.append(_reading(now, cell, "density", float(poi_counts.get(cell, 0)), "osm"))
+        rows.append(_reading(now, cell, "density", float(poi_count), "osm"))
+    log.info("builtup_clip", candidates=len(candidates), kept=kept)
 
     await session.execute(delete(Reading).where(Reading.source.in_(_REPLACED_SOURCES)))
     if rows:
@@ -157,9 +169,10 @@ async def ingest_real(session: AsyncSession, now: datetime | None = None) -> dic
         "temp": len(temps),
         "aqi": len(aqis),
         "poi_cells": len(poi_counts),
-        "green": len(green_polys),
-        "roads": len(road_lines),
-        "places": len(places),
+        "green": len(features.green),
+        "water": len(features.water),
+        "roads": len(features.roads),
+        "places": len(features.places),
     }
     log.info("ingest_complete", readings=len(rows), stress_cells=cell_count, **sources)
     return {"cells": cell_count, "sources": sources}
