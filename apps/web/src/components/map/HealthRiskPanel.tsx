@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ChevronDown, ExternalLink, HeartPulse } from 'lucide-react';
 import {
   assessHealth,
+  aqliYearsFromAnnualPm25,
   pm25FromUsAqi,
   usAqiFromScore,
   RISK_BAND_META,
@@ -11,6 +12,7 @@ import {
   type HealthMetric,
 } from '@platform/shared-types';
 import { HEALTH_EVIDENCE, AQLI_SOURCE, DENSITY_NOTE } from '@/lib/evocomb/health-evidence';
+import { annualPm25At } from '@/lib/evocomb/annual-pm25';
 import type { StressCell } from '@/lib/api/stress';
 
 const METRIC_LABEL: Record<HealthMetric, string> = {
@@ -39,6 +41,11 @@ export function HealthRiskPanel({ cell }: { cell: StressCell }) {
   const aqiScore = cell.scores.aqi;
   const pm25 = aqiScore != null ? pm25FromUsAqi(usAqiFromScore(aqiScore)) : null;
   const pmMultiple = pm25 != null ? pm25 / WHO_PM25_ANNUAL : null;
+
+  // AQLI life-expectancy from this cell's ANNUAL-AVERAGE PM2.5 (the correct AQLI input),
+  // IDW'd from the committed annual grid — not the current reading.
+  const annualPm25 = annualPm25At(cell.lat, cell.lng);
+  const leLoss = aqliYearsFromAnnualPm25(annualPm25);
 
   const dominantEvidence = h.dominant ? (HEALTH_EVIDENCE[h.dominant] ?? []) : [];
 
@@ -90,25 +97,26 @@ export function HealthRiskPanel({ cell }: { cell: StressCell }) {
         )}
       </dl>
 
-      {/* AQLI context — REGIONAL & annual, not per-cell. A per-cell figure from a current
-          (peak-season) AQI would overstate AQLI's annual-average methodology and wouldn't
-          vary meaningfully, so we anchor to the published regional estimate instead. */}
-      <div className="rounded-lg bg-muted/50 p-2.5">
-        <p className="text-xs leading-relaxed text-card-foreground">
-          Sustained PM2.5 at Delhi NCR&apos;s levels is associated, at the{' '}
-          <span className="text-muted-foreground">population level</span>, with{' '}
-          <span className="font-semibold">roughly a decade</span> of lower life expectancy vs the
-          WHO guideline.
-        </p>
-        <a
-          href={AQLI_SOURCE.link}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-1 inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-card-foreground"
-        >
-          Air Quality Life Index (annual estimate), {AQLI_SOURCE.institution} ↗
-        </a>
-      </div>
+      {/* AQLI per-cell — from this cell's ANNUAL-AVERAGE PM2.5 (the correct AQLI input),
+          not the current reading. Population-average, vs the WHO guideline. */}
+      {leLoss != null && leLoss > 0 && (
+        <div className="rounded-lg bg-muted/50 p-2.5">
+          <p className="text-xs leading-relaxed text-card-foreground">
+            <span className="font-semibold">≈ {leLoss} years</span> lower{' '}
+            <span className="text-muted-foreground">population-average</span> life expectancy here
+            — from an annual-average PM2.5 of ~{Math.round(annualPm25)} µg/m³ vs the WHO guideline
+            of 5.
+          </p>
+          <a
+            href={AQLI_SOURCE.link}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-1 inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-card-foreground"
+          >
+            Air Quality Life Index (AQLI), {AQLI_SOURCE.institution} ↗
+          </a>
+        </div>
+      )}
 
       {/* Evidence for the dominant driver */}
       {dominantEvidence.length > 0 && (
