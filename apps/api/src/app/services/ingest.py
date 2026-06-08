@@ -19,8 +19,7 @@ import asyncio
 from collections.abc import Awaitable
 from datetime import UTC, datetime
 
-from shapely.geometry import Point
-from shapely.prepared import prep
+import h3
 from sqlalchemy import delete, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,7 +27,7 @@ from app.core.logging import get_logger
 from app.db.h3_utils import cell_to_latlng
 from app.domain.methodology import H3_RESOLUTION, urban_heat_offset
 from app.ingestion.air_quality import fetch_aqi_grid
-from app.ingestion.boundary import fetch_delhi_boundary
+from app.ingestion.boundary import fetch_ncr_boundary
 from app.ingestion.geofeatures import GreenIndex, PlaceIndex, RoadNoiseIndex
 from app.ingestion.interpolate import idw
 from app.ingestion.osm import (
@@ -40,7 +39,7 @@ from app.ingestion.osm import (
 from app.ingestion.weather import fetch_temperature_grid
 from app.models.reading import Reading
 from app.services.aggregation import recompute_cells
-from app.services.coverage import DELHI_BBOX, candidate_cells, delhi_cells
+from app.services.coverage import NCR_BBOX, delhi_cells
 
 log = get_logger("ingest")
 
@@ -83,15 +82,15 @@ def _reading(now: datetime, cell: str, metric: str, value: float, source: str) -
 
 
 async def _coverage_cells() -> list[str]:
-    """Cells clipped to the real Delhi boundary (contiguous, city-shaped). Falls back to
-    the core disk if the boundary can't be fetched."""
-    boundary = await fetch_delhi_boundary()
+    """Every H3 cell whose centre falls inside the NCR-core admin footprint, via direct
+    polygon fill (h3.geo_to_cells). Falls back to the Delhi-core disk if the boundary can't
+    be fetched."""
+    boundary = await fetch_ncr_boundary()
     if boundary is None:
         log.warning("boundary_unavailable_using_disk")
         return delhi_cells()
-    contains = prep(boundary).contains
-    cells = [c for c in candidate_cells() if contains(Point(*reversed(cell_to_latlng(c))))]
-    log.info("boundary_clip", kept=len(cells))
+    cells = [str(c) for c in h3.geo_to_cells(boundary, H3_RESOLUTION)]
+    log.info("boundary_fill", cells=len(cells))
     return cells
 
 
@@ -101,12 +100,12 @@ async def ingest_real(session: AsyncSession, now: datetime | None = None) -> dic
     # Fetch all sources concurrently so total time ≈ the slowest source (not the sum of
     # all retry/backoff waits) — important on throttled cloud IPs like Render's.
     temps, aqis, poi_counts, green_polys, road_lines, places = await asyncio.gather(
-        _safe(fetch_temperature_grid(DELHI_BBOX), [], "met_no_temp"),
-        _safe(fetch_aqi_grid(DELHI_BBOX), [], "open_meteo_aqi"),
-        _safe(fetch_poi_counts_by_cell(DELHI_BBOX, H3_RESOLUTION), {}, "osm_pois"),
-        _safe(fetch_green_polygons(DELHI_BBOX), [], "osm_green"),
-        _safe(fetch_road_lines(DELHI_BBOX), [], "osm_roads"),
-        _safe(fetch_place_points(DELHI_BBOX), [], "osm_places"),
+        _safe(fetch_temperature_grid(NCR_BBOX, nx=5, ny=5), [], "met_no_temp"),
+        _safe(fetch_aqi_grid(NCR_BBOX), [], "open_meteo_aqi"),
+        _safe(fetch_poi_counts_by_cell(NCR_BBOX, H3_RESOLUTION), {}, "osm_pois"),
+        _safe(fetch_green_polygons(NCR_BBOX), [], "osm_green"),
+        _safe(fetch_road_lines(NCR_BBOX), [], "osm_roads"),
+        _safe(fetch_place_points(NCR_BBOX), [], "osm_places"),
     )
     log.info(
         "fetched_sources",

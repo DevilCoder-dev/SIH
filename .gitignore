@@ -37,7 +37,9 @@ pnpm-debug.log*
 !.vscode/extensions.json
 *.swp
 
-# Local caches
+# Local caches. (The NCR admin boundary under apps/api/.cache is force-added/tracked as
+# static reference data the cloud/CI ingest needs deterministically — Overpass blocks
+# shared cloud IPs — so it stays committed despite this rule.)
 .cache/
 
 # Coverage
