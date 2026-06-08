@@ -47,11 +47,6 @@ _NOISE_FLOOR_DB = 42.0  # mirrors geofeatures._NOISE_FLOOR_DB (quiet baseline)
 _NOISE_AT_ROAD_DB = 80.0  # mirrors geofeatures._NOISE_AT_ROAD_DB (on a major road)
 _BUILTUP_POI_FULL = 30.0  # POIs in a res-9 cell that read as fully built-up
 
-# A cell is "urban" enough to ingest if it has any POI or sits within ~600 m of a major
-# road (noise ≥ 50 dB on the proxy scale). This drops the rural district fringe in the NCR
-# footprint — keeping the cell set honest (no data → no cell) and the payload manageable.
-_BUILTUP_MIN_NOISE_DB = 50.0
-
 
 def _builtup(noise_db: float | None, poi_count: int) -> float:
     """0–1 built-up intensity for a cell from its road proximity + POI density."""
@@ -126,17 +121,13 @@ async def ingest_real(session: AsyncSession, now: datetime | None = None) -> dic
     rows: list[dict[str, object]] = []
     green_factors: dict[str, float] = {}
     localities: dict[str, str | None] = {}
-    kept = 0
+    # Score every cell in the NCR footprint for continuous coverage. Rural/low-activity cells
+    # still carry real AQI, heat and greenery data (noise/density just read low there), so the
+    # map is a gap-free surface rather than only the road network.
     for cell in candidates:
         lat, lng = cell_to_latlng(cell)
         noise = road_idx.noise_db(lat, lng)
         poi_count = int(poi_counts.get(cell, 0))
-
-        # Built-up clip: skip rural-fringe cells (no POIs and far from any major road).
-        near_road = noise is not None and noise >= _BUILTUP_MIN_NOISE_DB
-        if poi_count == 0 and not near_road:
-            continue
-        kept += 1
 
         ambient = idw(temps, lat, lng) if temps else None
         aqi = idw(aqis, lat, lng) if aqis else None
@@ -155,7 +146,7 @@ async def ingest_real(session: AsyncSession, now: datetime | None = None) -> dic
         if noise is not None:
             rows.append(_reading(now, cell, "noise", noise, "osm"))
         rows.append(_reading(now, cell, "density", float(poi_count), "osm"))
-    log.info("builtup_clip", candidates=len(candidates), kept=kept)
+    log.info("cells_scored", count=len(candidates))
 
     await session.execute(delete(Reading).where(Reading.source.in_(_REPLACED_SOURCES)))
     if rows:
