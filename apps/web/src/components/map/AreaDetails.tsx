@@ -5,8 +5,12 @@ import { esiBand } from '@platform/shared-types';
 import { formatRaw, GREENERY, HEURISTICS } from '@/lib/heuristics';
 import type { StressCell } from '@/lib/api/stress';
 import { useStressCells } from '@/hooks/useStressCells';
+import { HealthRiskPanel } from './HealthRiskPanel';
 
 const rgba = (c: readonly number[]) => `rgb(${c[0]},${c[1]},${c[2]})`;
+
+// Greenery relief fraction — mirrors GREENERY_RELIEF in the backend methodology.
+const GREENERY_RELIEF_PCT = 60;
 
 function summarize(cell: StressCell): string {
   const present = HEURISTICS.filter((h) => cell.scores[h.key] != null);
@@ -102,9 +106,11 @@ export function AreaDetails({ cell }: { cell: StressCell }) {
           className="rounded-lg p-2 text-xs"
           style={{ backgroundColor: `${GREENERY.color}14`, color: GREENERY.color }}
         >
-          🌳 Greenery here lowers the score by {Math.round(cell.greenery * 50)}%.
+          🌳 Greenery here lowers the score by {Math.round(cell.greenery * GREENERY_RELIEF_PCT)}%.
         </div>
       )}
+
+      <HealthRiskPanel cell={cell} />
 
       <p className="text-[11px] leading-snug text-muted-foreground">
         Values are estimates for this ~150&nbsp;m hexagon. Air quality &amp; heat are live;
