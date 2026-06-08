@@ -116,14 +116,15 @@ const HEAT_EVIDENCE: HealthEvidence[] = [
   {
     id: 'heat-mortality',
     claim:
-      'High ambient temperature raises population mortality, especially in the elderly and outdoor workers; risk is driven by extremes/heatwaves and local acclimatization, not annual mean temperature.',
+      'High ambient temperature raises population mortality, with risk escalating non-linearly above a location-specific minimum-mortality temperature; driven by the temperature distribution, not annual mean.',
+    effect: '0.42% of deaths attributable to heat across 384 cities / 13 countries (74.2M deaths)',
     source: 'Gasparrini et al., multicountry temperature–mortality study',
     year: 2015,
     institution: 'The Lancet',
     grade: 'High',
-    verified: false,
-    note: 'U-shaped exposure–response with a location-specific minimum-mortality temperature. Pending re-verification.',
-    link: 'https://doi.org/10.1016/S0140-6736(14)62114-0',
+    verified: true,
+    note: 'U/J-shaped exposure–response; minimum-mortality temperature ~80–90th percentile (varies by climate). Heat is episodic & vulnerability-dependent.',
+    link: 'https://www.thelancet.com/journals/lancet/article/PIIS0140-6736(14)62114-0/fulltext',
     doi: '10.1016/S0140-6736(14)62114-0',
   },
 ];
