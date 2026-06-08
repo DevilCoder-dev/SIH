@@ -59,7 +59,9 @@ assert abs(sum(WEIGHTS.values()) - 1.0) < 1e-9, "ESI weights must sum to 1.0"
 # Greenery is not a burden but a *mitigator*: parks/tree cover lower local environmental
 # stress (cooling, buffering, less crowding). A cell's ESI is reduced by up to this
 # fraction in proportion to its green coverage (0–1). green_factor 1.0 -> ESI ×(1−relief).
-GREENERY_RELIEF = 0.5
+# A fully green cell now gets up to a 60% reduction (was 50%) — greenery weighted a little
+# more strongly as a mitigator.
+GREENERY_RELIEF = 0.6
 
 
 def apply_greenery(esi: float, green_factor: float) -> float:
