@@ -87,8 +87,15 @@ export function heatBand(heatScore: number | null | undefined): RiskBand | null 
   return 'high';
 }
 
-/** AQLI population-average life-expectancy loss (years) vs the WHO guideline.
- *  "If sustained year-round" — our input is a current AQI, not an annual average. */
+/** AQLI population-average life-expectancy loss (years) from an ANNUAL-AVERAGE PM2.5 (µg/m³),
+ *  vs the WHO 5 µg/m³ guideline — the correct AQLI input. Linear, no threshold.
+ *  Verified: 0.098 yr/µg/m³ (Ebenstein et al., PNAS 2017; AQLI). Population-average only. */
+export function aqliYearsFromAnnualPm25(annualPm25: number | null | undefined): number | null {
+  if (annualPm25 == null || Number.isNaN(annualPm25)) return null;
+  return Math.round(AQLI_YEARS_PER_UGM3 * Math.max(0, annualPm25 - WHO_PM25_ANNUAL) * 10) / 10;
+}
+
+/** @deprecated Uses a CURRENT AQI as if annual → overstates. Use aqliYearsFromAnnualPm25. */
 export function lifeExpectancyLossYears(aqiScore: number | null | undefined): number | null {
   if (aqiScore == null) return null;
   const pm25 = pm25FromUsAqi(usAqiFromScore(aqiScore));

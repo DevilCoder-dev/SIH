@@ -139,14 +139,14 @@ export const HEALTH_EVIDENCE: Record<HealthMetric, HealthEvidence[]> = {
 export const AQLI_SOURCE: HealthEvidence = {
   id: 'aqli',
   claim:
-    'A sustained 10 µg/m³ higher PM2.5 is associated, at the population level, with ~0.98 fewer years of life expectancy (relative to the WHO guideline).',
-  effect: '~0.098 life-years per µg/m³',
-  source: 'Air Quality Life Index (Greenstone/Ebenstein)',
+    'A sustained 10 µg/m³ higher annual PM2.5 is associated, at the population level, with ~0.98 fewer years of life expectancy (relative to the WHO guideline).',
+  effect: '0.098 life-years per µg/m³',
+  source: 'Air Quality Life Index (Greenstone/Ebenstein), Huai River study',
   year: 2017,
   institution: 'Energy Policy Institute, University of Chicago / PNAS',
   grade: 'Moderate',
-  verified: false,
-  note: 'Population-average, not individual. Calibrated on ANNUAL-average PM2.5 — our figure is "if sustained year-round." Coefficient pending re-verification.',
+  verified: true,
+  note: 'Population-average, never individual. Coefficient 0.098 yr/µg/m³ verified (Ebenstein et al., PNAS 2017, via AQLI). Computed from this cell’s annual-average PM2.5 vs the WHO 5 µg/m³ guideline; regional-resolution input (~11 km), dust included.',
   link: 'https://aqli.epic.uchicago.edu/about/methodology/',
   doi: '10.1073/pnas.1616784114',
 };
