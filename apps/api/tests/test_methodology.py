@@ -11,6 +11,7 @@ from app.domain.methodology import (
     normalize_density,
     normalize_heat,
     normalize_noise,
+    urban_heat_offset,
 )
 
 
@@ -63,9 +64,18 @@ def test_partial_data_renormalizes() -> None:
 
 
 def test_confidence_all_present() -> None:
-    # 0.30*1.0 + 0.25*0.6 + 0.20*0.9 + 0.25*0.8 = 0.83
+    # 0.30*1.0 + 0.25*0.6 + 0.20*0.7 + 0.25*0.8 = 0.79  (heat = modeled UHI proxy)
     scores = StressScores(noise=80, density=60, heat=70, aqi=50)
-    assert compute_confidence(scores) == pytest.approx(0.83)
+    assert compute_confidence(scores) == pytest.approx(0.79)
+
+
+def test_urban_heat_offset() -> None:
+    # Fully built-up adds +4°C; water cools −2°C; bare/ambient is 0; inputs clamp.
+    assert urban_heat_offset(1.0) == pytest.approx(4.0)
+    assert urban_heat_offset(0.0) == pytest.approx(0.0)
+    assert urban_heat_offset(0.5) == pytest.approx(2.0)
+    assert urban_heat_offset(1.0, water=1.0) == pytest.approx(2.0)
+    assert urban_heat_offset(2.0, water=2.0) == pytest.approx(2.0)  # clamped to [0,1]
 
 
 def test_confidence_partial_lower() -> None:

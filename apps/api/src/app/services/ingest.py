@@ -1,6 +1,7 @@
 """Real-data ingestion — replaces the synthetic simulator with real/derived inputs:
 
-- Heat:    Open-Meteo temperature (real, no key)
+- Heat:    MET Norway ambient temperature + a modeled urban-heat-island offset
+           (built-up density raises it) — gives real per-cell variation, not a flat field
 - AQI:     Open-Meteo US AQI (real, no key)
 - Density: OSM POI density per H3 cell (proxy for crowding)
 - Noise:   distance to nearest OSM major road (proxy for traffic noise)
@@ -25,7 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
 from app.db.h3_utils import cell_to_latlng
-from app.domain.methodology import H3_RESOLUTION
+from app.domain.methodology import H3_RESOLUTION, urban_heat_offset
 from app.ingestion.air_quality import fetch_aqi_grid
 from app.ingestion.boundary import fetch_delhi_boundary
 from app.ingestion.geofeatures import GreenIndex, PlaceIndex, RoadNoiseIndex
@@ -43,7 +44,22 @@ from app.services.coverage import DELHI_BBOX, candidate_cells, delhi_cells
 
 log = get_logger("ingest")
 
-_REPLACED_SOURCES = ("simulator", "waqi", "open_meteo", "osm")
+_REPLACED_SOURCES = ("simulator", "waqi", "open_meteo", "met_no", "osm")
+
+# Built-up intensity (0–1) for the UHI proxy, derived from data already fetched per cell:
+# proximity to major roads (via the noise dB proxy) + POI clustering. Concrete/asphalt and
+# dense activity = hotter surface than ambient air.
+_NOISE_FLOOR_DB = 42.0  # mirrors geofeatures._NOISE_FLOOR_DB (quiet baseline)
+_NOISE_AT_ROAD_DB = 80.0  # mirrors geofeatures._NOISE_AT_ROAD_DB (on a major road)
+_BUILTUP_POI_FULL = 30.0  # POIs in a res-9 cell that read as fully built-up
+
+
+def _builtup(noise_db: float | None, poi_count: int) -> float:
+    """0–1 built-up intensity for a cell from its road proximity + POI density."""
+    road_span = _NOISE_AT_ROAD_DB - _NOISE_FLOOR_DB
+    road = 0.0 if noise_db is None else (noise_db - _NOISE_FLOOR_DB) / road_span
+    poi = poi_count / _BUILTUP_POI_FULL
+    return max(0.0, min(1.0, 0.6 * road + 0.5 * poi))
 
 async def _safe[T](coro: Awaitable[T], default: T, label: str) -> T:
     """Run a source fetch; on failure log and return a default so one flaky/blocked source
@@ -112,14 +128,18 @@ async def ingest_real(session: AsyncSession, now: datetime | None = None) -> dic
     localities: dict[str, str | None] = {}
     for cell in cells:
         lat, lng = cell_to_latlng(cell)
-        heat = idw(temps, lat, lng) if temps else None
+        ambient = idw(temps, lat, lng) if temps else None
         aqi = idw(aqis, lat, lng) if aqis else None
         noise = road_idx.noise_db(lat, lng)
         green_factors[cell] = green_idx.factor(lat, lng)
         localities[cell] = place_idx.nearest_name(lat, lng)
 
-        if heat is not None:
-            rows.append(_reading(now, cell, "heat", heat, "open_meteo"))
+        # Heat = ambient air temp + modeled urban-heat-island offset from built-up density.
+        # This turns a near-flat ambient field into real per-cell variation.
+        if ambient is not None:
+            builtup = _builtup(noise, int(poi_counts.get(cell, 0)))
+            heat = ambient + urban_heat_offset(builtup)
+            rows.append(_reading(now, cell, "heat", heat, "met_no"))
         if aqi is not None:
             rows.append(_reading(now, cell, "aqi", aqi, "open_meteo"))
         if noise is not None:
