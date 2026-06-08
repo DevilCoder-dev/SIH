@@ -14,8 +14,8 @@ const schema = z.object({
   NEXT_PUBLIC_MAP_STYLE_URL: z
     .string()
     .url()
-    // Dark basemap to match the research-grade dark UI (keyless CARTO dark-matter).
-    .default('https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'),
+    // Light basemap — clearest backdrop for the ESI heatmap overlay.
+    .default('https://tiles.openfreemap.org/styles/liberty'),
   NEXT_PUBLIC_MAP_DEFAULT_LON: z.coerce.number().min(-180).max(180).default(77.209),
   NEXT_PUBLIC_MAP_DEFAULT_LAT: z.coerce.number().min(-90).max(90).default(28.6139),
   NEXT_PUBLIC_MAP_DEFAULT_ZOOM: z.coerce.number().min(0).max(24).default(11),
