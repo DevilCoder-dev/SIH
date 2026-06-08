@@ -70,13 +70,40 @@
   body {
     height: 100%;
   }
+  /* The product is dark end-to-end; a dark canvas avoids a white flash before
+     the WebGL backdrop and React mount. */
   body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
+    background-color: #0a0b0d;
+    color: #ededed;
     margin: 0;
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
   /* Pages render in normal (scrollable) flow; the map page pins itself to the viewport. */
   #app-root {
     min-height: 100vh;
+  }
+  ::selection {
+    background: rgba(241, 196, 15, 0.3);
+  }
+}
+
+/* Map Tailwind's font utilities to the next/font families. */
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex), ui-monospace, 'SFMono-Regular', monospace;
+}
+
+/* Respect reduced-motion globally: kill long transitions/animations the JS
+   guards may not cover. Lenis + GSAP are disabled separately in JS. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }
