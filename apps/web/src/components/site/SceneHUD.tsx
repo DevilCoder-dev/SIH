@@ -66,13 +66,6 @@ export function SceneHUD() {
           {String(Math.round(pct * 100)).padStart(2, '0')}
         </span>
       </div>
-
-      {/* Bottom-left legend */}
-      <div className="absolute bottom-7 left-8 flex items-center gap-3 font-mono text-[10px] tracking-wider text-white/45">
-        <span>LOW</span>
-        <span className="h-1.5 w-28 rounded-full bg-gradient-to-r from-emerald-500 via-amber-400 to-rose-600" />
-        <span>HIGH BURDEN</span>
-      </div>
     </div>
   );
 }

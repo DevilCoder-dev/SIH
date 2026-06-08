@@ -30,14 +30,6 @@ export function Hero() {
     <section id="hero" className="relative z-10 flex min-h-[100svh] items-center">
       <div ref={ref} className="mx-auto w-full max-w-7xl px-5 md:px-8">
         <div className="max-w-3xl">
-          <p
-            data-anim
-            className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.03] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.22em] text-white/55"
-          >
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-            Environmental intelligence · Delhi NCR
-          </p>
-
           <h1
             data-anim
             className="text-balance text-[2.6rem] font-semibold leading-[1.02] tracking-tight text-white sm:text-6xl md:text-7xl"
