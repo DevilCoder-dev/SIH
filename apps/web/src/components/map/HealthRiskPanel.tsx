@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { ChevronDown, ExternalLink, HeartPulse } from 'lucide-react';
 import {
   assessHealth,
-  lifeExpectancyLossYears,
   pm25FromUsAqi,
   usAqiFromScore,
   RISK_BAND_META,
@@ -40,7 +39,6 @@ export function HealthRiskPanel({ cell }: { cell: StressCell }) {
   const aqiScore = cell.scores.aqi;
   const pm25 = aqiScore != null ? pm25FromUsAqi(usAqiFromScore(aqiScore)) : null;
   const pmMultiple = pm25 != null ? pm25 / WHO_PM25_ANNUAL : null;
-  const leLoss = lifeExpectancyLossYears(aqiScore);
 
   const dominantEvidence = h.dominant ? (HEALTH_EVIDENCE[h.dominant] ?? []) : [];
 
@@ -92,26 +90,25 @@ export function HealthRiskPanel({ cell }: { cell: StressCell }) {
         )}
       </dl>
 
-      {/* AQLI insight — population-average, "if sustained year-round" */}
-      {leLoss != null && leLoss > 0 && (
-        <div className="rounded-lg bg-muted/50 p-2.5">
-          <p className="text-xs leading-relaxed text-card-foreground">
-            <span className="font-semibold">≈ {leLoss} years</span> lower{' '}
-            <span className="text-muted-foreground">population-average</span> life expectancy{' '}
-            <span className="text-muted-foreground">
-              if this PM2.5 level were sustained year-round, vs meeting the WHO guideline.
-            </span>
-          </p>
-          <a
-            href={AQLI_SOURCE.link}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-1 inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-card-foreground"
-          >
-            AQLI methodology, {AQLI_SOURCE.institution} ↗
-          </a>
-        </div>
-      )}
+      {/* AQLI context — REGIONAL & annual, not per-cell. A per-cell figure from a current
+          (peak-season) AQI would overstate AQLI's annual-average methodology and wouldn't
+          vary meaningfully, so we anchor to the published regional estimate instead. */}
+      <div className="rounded-lg bg-muted/50 p-2.5">
+        <p className="text-xs leading-relaxed text-card-foreground">
+          Sustained PM2.5 at Delhi NCR&apos;s levels is associated, at the{' '}
+          <span className="text-muted-foreground">population level</span>, with{' '}
+          <span className="font-semibold">roughly a decade</span> of lower life expectancy vs the
+          WHO guideline.
+        </p>
+        <a
+          href={AQLI_SOURCE.link}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-1 inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-card-foreground"
+        >
+          Air Quality Life Index (annual estimate), {AQLI_SOURCE.institution} ↗
+        </a>
+      </div>
 
       {/* Evidence for the dominant driver */}
       {dominantEvidence.length > 0 && (
