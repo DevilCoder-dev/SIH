@@ -1,5 +1,10 @@
 import { create } from 'zustand';
-import { MAP_LAYER_IDS, type MapLayerId } from '@platform/shared-types';
+import {
+  MAP_LAYER_IDS,
+  STRESS_LAYER_KEYS,
+  type MapLayerId,
+  type StressLayerKey,
+} from '@platform/shared-types';
 import { MAP_DEFAULTS } from '@/lib/map/config';
 import type { StressCell } from '@/lib/api/stress';
 
@@ -23,11 +28,13 @@ interface MapState {
   viewport: Viewport;
   bounds: Bounds | null;
   visibleLayers: Record<MapLayerId, boolean>;
+  activeStressLayer: StressLayerKey;
   selectedCell: StressCell | null;
   explainerOpen: boolean;
   setViewport: (viewport: Viewport) => void;
   setBounds: (bounds: Bounds) => void;
   toggleLayer: (id: MapLayerId) => void;
+  setActiveStressLayer: (layer: StressLayerKey) => void;
   setSelectedCell: (cell: StressCell | null) => void;
   toggleExplainer: () => void;
   setExplainerOpen: (open: boolean) => void;
@@ -48,12 +55,14 @@ export const useMapStore = create<MapState>((set) => ({
     [MAP_LAYER_IDS.hexagon]: true, // ESI H3 heatmap on by default
     [MAP_LAYER_IDS.hotspots]: false,
   },
+  activeStressLayer: STRESS_LAYER_KEYS.esi,
   setViewport: (viewport) => set({ viewport }),
   setBounds: (bounds) => set({ bounds }),
   toggleLayer: (id) =>
     set((state) => ({
       visibleLayers: { ...state.visibleLayers, [id]: !state.visibleLayers[id] },
     })),
+  setActiveStressLayer: (activeStressLayer) => set({ activeStressLayer }),
   setSelectedCell: (cell) => set({ selectedCell: cell }),
   toggleExplainer: () => set((state) => ({ explainerOpen: !state.explainerOpen })),
   setExplainerOpen: (open) => set({ explainerOpen: open }),

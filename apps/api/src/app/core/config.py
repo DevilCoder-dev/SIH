@@ -47,6 +47,11 @@ class Settings(BaseSettings):
 
     # Token guarding the manual data-refresh endpoint (POST /api/v1/admin/ingest).
     ingest_token: str = ""
+    # When enabled, maintain a non-blocking data refresh loop. It ingests after startup if
+    # the latest snapshot is missing/stale and keeps checking while the API is alive.
+    # Production enables this explicitly; local development/tests stay deterministic.
+    ingest_on_startup: bool = False
+    ingest_max_age_minutes: int = Field(default=360, ge=1)
 
     # --- External data providers (Phase 4) ---
     waqi_token: str = ""  # free token from https://aqicn.org/data-platform/token/

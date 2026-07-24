@@ -20,5 +20,9 @@ export function useStressCells() {
     queryFn: () => fetchStressCells(bounds!),
     enabled: bounds !== null,
     placeholderData: keepPreviousData,
+    // During first-run ingestion the API intentionally returns an empty collection.
+    // Poll only in that bootstrap state, then stop as soon as the first cells arrive.
+    refetchInterval: (query) => (query.state.data?.cells.length === 0 ? 10_000 : false),
+    refetchIntervalInBackground: true,
   });
 }

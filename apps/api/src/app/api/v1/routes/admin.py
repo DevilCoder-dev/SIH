@@ -8,7 +8,6 @@ required to refresh.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException
@@ -16,37 +15,23 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.core.logging import get_logger
 from app.db import session as db_session
 from app.db.session import get_session
 from app.models.stress_cell import StressCell
-from app.services.ingest import ingest_real
+from app.services.ingestion_runtime import (
+    data_snapshot,
+    ingestion_running,
+    run_ingest,
+    status_snapshot,
+)
 
 router = APIRouter()
-log = get_logger("admin")
-
-# Last ingestion outcome, surfaced via GET /admin/ingest/status for remote diagnosis.
-_status: dict[str, object] = {"state": "idle"}
-
-
-def _stamp(**fields: object) -> None:
-    _status.clear()
-    _status.update(at=datetime.now(UTC).isoformat(), **fields)
 
 
 async def _run_ingest() -> None:
     if db_session.session_factory is None:
-        _stamp(state="failed", error="no session factory")
         return
-    _stamp(state="running")
-    try:
-        async with db_session.session_factory() as session:
-            result = await ingest_real(session)
-        _stamp(state="done", **result)
-        log.info("admin_ingest_done", **result)
-    except Exception as exc:  # background task: record, never crash the worker
-        _stamp(state="failed", error=str(exc))
-        log.error("admin_ingest_failed", error=str(exc))
+    await run_ingest(db_session.session_factory, trigger="manual")
 
 
 @router.post("/admin/ingest")
@@ -61,10 +46,14 @@ async def trigger_ingest(
         existing = await session.scalar(select(func.count()).select_from(StressCell))
         if existing and existing > 0:
             raise HTTPException(403, "data already loaded; valid token required to refresh")
+    if ingestion_running():
+        return {"status": "ingestion already running"}
     background.add_task(_run_ingest)
     return {"status": "ingestion started"}
 
 
 @router.get("/admin/ingest/status")
-async def ingest_status() -> dict[str, object]:
-    return _status
+async def ingest_status(
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> dict[str, object]:
+    return {**status_snapshot(), "data": await data_snapshot(session)}

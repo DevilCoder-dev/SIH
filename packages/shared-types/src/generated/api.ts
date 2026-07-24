@@ -100,6 +100,18 @@ export interface components {
             /** Redis */
             redis: boolean;
         };
+        /** DataStatus */
+        DataStatus: {
+            /** Has Data */
+            has_data: boolean;
+            /** Cells */
+            cells: number;
+            /**
+             * Latest Bucket
+             * Format: date-time
+             */
+            latest_bucket: string | null;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -126,6 +138,7 @@ export interface components {
              */
             status: "ready" | "degraded";
             dependencies: components["schemas"]["DependencyStatus"];
+            data: components["schemas"]["DataStatus"];
         };
         /** StressCellCollection */
         StressCellCollection: {

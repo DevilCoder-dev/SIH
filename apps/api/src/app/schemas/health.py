@@ -4,6 +4,7 @@ These Pydantic models are part of the API's OpenAPI schema and therefore the sou
 truth for the frontend's generated TypeScript types (see packages/shared-types).
 """
 
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel
@@ -18,6 +19,13 @@ class DependencyStatus(BaseModel):
     redis: bool
 
 
+class DataStatus(BaseModel):
+    has_data: bool
+    cells: int
+    latest_bucket: datetime | None
+
+
 class ReadinessResponse(BaseModel):
     status: Literal["ready", "degraded"]
     dependencies: DependencyStatus
+    data: DataStatus

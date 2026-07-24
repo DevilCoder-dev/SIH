@@ -100,7 +100,10 @@ async def get_stress_cells(
 
     if bucket is None:
         return ORJSONResponse(
-            {"bucket": None, "count": 0, "truncated": False, "cells": []}, headers=headers
+            {"bucket": None, "count": 0, "truncated": False, "cells": []},
+            # A first-run ingest can finish moments after this response. Do not let the
+            # browser/CDN pin the bootstrap state while the client is polling for cells.
+            headers={"Cache-Control": "no-store"},
         )
 
     out = [

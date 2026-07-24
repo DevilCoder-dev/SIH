@@ -3,14 +3,17 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Layers, X } from 'lucide-react';
-import { ESI_COLOR_RAMP } from '@platform/shared-types';
+import { ESI_COLOR_RAMP, STRESS_LAYER_COLORS, STRESS_LAYER_LABELS } from '@platform/shared-types';
+import { useMapStore } from '@/stores/map-store';
 
-const rgba = (c: [number, number, number, number]) =>
-  `rgba(${c[0]},${c[1]},${c[2]},${c[3] / 255})`;
+const rgba = (c: [number, number, number, number]) => `rgba(${c[0]},${c[1]},${c[2]},${c[3] / 255})`;
 
 // Color-ramp legend as a toggle popup (hidden by default).
 export function Legend() {
   const [open, setOpen] = useState(false);
+  const activeLayer = useMapStore((s) => s.activeStressLayer);
+  const factorColor = activeLayer === 'esi' ? null : STRESS_LAYER_COLORS[activeLayer];
+  const factorRgb = factorColor ? `${factorColor[0]},${factorColor[1]},${factorColor[2]}` : '';
 
   return (
     <div className="pointer-events-none absolute bottom-6 left-4 z-10">
@@ -32,23 +35,38 @@ export function Legend() {
               <X className="h-3.5 w-3.5" />
             </button>
             <p className="mb-2 text-xs font-semibold text-card-foreground">
-              Environmental Stress Index
+              {STRESS_LAYER_LABELS[activeLayer]}
             </p>
-            <div className="flex flex-col gap-1">
-              {ESI_COLOR_RAMP.map((band) => (
-                <div key={band.label} className="flex items-center gap-2 text-xs">
-                  <span
-                    className="inline-block h-3 w-4 rounded-sm"
-                    style={{ background: rgba(band.color) }}
-                  />
-                  <span className="text-muted-foreground">
-                    {band.min}–{band.max} · {band.label}
-                  </span>
+            {activeLayer === 'esi' ? (
+              <div className="flex flex-col gap-1">
+                {ESI_COLOR_RAMP.map((band) => (
+                  <div key={band.label} className="flex items-center gap-2 text-xs">
+                    <span
+                      className="inline-block h-3 w-4 rounded-sm"
+                      style={{ background: rgba(band.color) }}
+                    />
+                    <span className="text-muted-foreground">
+                      {band.min}–{band.max} · {band.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <div
+                  className="h-3 w-48 rounded-sm"
+                  style={{
+                    background: `linear-gradient(90deg, rgba(${factorRgb},0.12), rgba(${factorRgb},1))`,
+                  }}
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>Low · 0</span>
+                  <span>High · 100</span>
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
             <p className="mt-2 max-w-[190px] text-[10px] leading-snug text-muted-foreground">
-              Regional intensity over ~100–300m H3 cells — not point-level accuracy.
+              Normalized intensity over ~100–300m H3 cells — not point-level accuracy.
             </p>
           </motion.div>
         ) : (

@@ -1,15 +1,15 @@
 """Liveness and readiness probes.
 
-`/health` is a static liveness signal (process is up). `/readiness` actively checks the
-critical dependencies (DB, Redis) so orchestrators only route traffic when the service
-can actually serve it. Foundation endpoints only — no business logic.
+`/health` is a static liveness signal (process is up). `/readiness` checks the critical
+dependencies and confirms that at least one stress-cell snapshot is available.
 """
 
 from fastapi import APIRouter, Request
-from sqlalchemy import text
+from sqlalchemy import func, select
 
 from app.db.session import get_session
-from app.schemas.health import DependencyStatus, HealthResponse, ReadinessResponse
+from app.models.stress_cell import StressCell
+from app.schemas.health import DataStatus, DependencyStatus, HealthResponse, ReadinessResponse
 
 router = APIRouter()
 
@@ -23,11 +23,23 @@ async def health() -> HealthResponse:
 async def readiness(request: Request) -> ReadinessResponse:
     db_ok = False
     redis_ok = False
+    data = DataStatus(has_data=False, cells=0, latest_bucket=None)
 
     try:
         async for session in get_session():
-            await session.execute(text("SELECT 1"))
+            count, latest = (
+                await session.execute(
+                    select(func.count())
+                    .select_from(StressCell)
+                    .add_columns(func.max(StressCell.bucket))
+                )
+            ).one()
             db_ok = True
+            data = DataStatus(
+                has_data=bool(count),
+                cells=int(count),
+                latest_bucket=latest,
+            )
             break
     except Exception:  # readiness must never raise
         db_ok = False
@@ -39,9 +51,10 @@ async def readiness(request: Request) -> ReadinessResponse:
         redis_ok = False
 
     deps = DependencyStatus(database=db_ok, redis=redis_ok)
-    # The DB is the only hard dependency for serving the heatmap; Redis is optional
+    # The DB and a populated snapshot are required for the heatmap; Redis is optional
     # (caching/realtime) and reported for information only.
     return ReadinessResponse(
-        status="ready" if db_ok else "degraded",
+        status="ready" if db_ok and data.has_data else "degraded",
         dependencies=deps,
+        data=data,
     )

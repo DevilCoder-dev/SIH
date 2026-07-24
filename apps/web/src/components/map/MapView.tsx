@@ -22,8 +22,9 @@ export function MapView() {
   const setBounds = useMapStore((s) => s.setBounds);
   const setSelectedCell = useMapStore((s) => s.setSelectedCell);
   const hexVisible = useMapStore((s) => s.visibleLayers[MAP_LAYER_IDS.hexagon]);
+  const activeStressLayer = useMapStore((s) => s.activeStressLayer);
 
-  const { data } = useStressCells();
+  const { data, isLoading, isError } = useStressCells();
   const cells = useMemo(() => data?.cells ?? [], [data]);
 
   // Create the map + overlay once.
@@ -82,9 +83,11 @@ export function MapView() {
     const overlay = overlayRef.current;
     if (!overlay) return;
     const layers =
-      hexVisible && cells.length > 0 ? [createStressHexLayer(cells, setSelectedCell)] : [];
+      hexVisible && cells.length > 0
+        ? [createStressHexLayer(cells, setSelectedCell, activeStressLayer)]
+        : [];
     overlay.setProps({ layers });
-  }, [cells, hexVisible, setSelectedCell]);
+  }, [activeStressLayer, cells, hexVisible, setSelectedCell]);
 
   return (
     <>
@@ -92,7 +95,29 @@ export function MapView() {
         ref={containerRef}
         style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
       />
-      <StressTooltip info={hover} />
+      {isLoading ? (
+        <div
+          role="status"
+          className="pointer-events-none absolute bottom-6 left-1/2 z-10 -translate-x-1/2 rounded-full border bg-card/90 px-3 py-2 text-xs text-muted-foreground shadow-sm backdrop-blur"
+        >
+          Loading environmental layers…
+        </div>
+      ) : isError ? (
+        <div
+          role="alert"
+          className="pointer-events-none absolute bottom-6 left-1/2 z-10 -translate-x-1/2 rounded-full border border-destructive/30 bg-card/95 px-3 py-2 text-xs text-destructive shadow-sm"
+        >
+          Environmental data could not be loaded.
+        </div>
+      ) : data && cells.length === 0 ? (
+        <div
+          role="status"
+          className="pointer-events-none absolute bottom-6 left-1/2 z-10 -translate-x-1/2 rounded-full border bg-card/95 px-3 py-2 text-xs text-muted-foreground shadow-sm"
+        >
+          Environmental data is being prepared. Refresh shortly.
+        </div>
+      ) : null}
+      <StressTooltip info={hover} activeLayer={activeStressLayer} />
     </>
   );
 }

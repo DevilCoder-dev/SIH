@@ -4,7 +4,6 @@ __pycache__
 .env
 .env.*
 !.env.example
-.cache
 .mypy_cache
 .ruff_cache
 .pytest_cache

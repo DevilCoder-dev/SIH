@@ -20,6 +20,11 @@ services:
         value: production
       - key: API_LOG_LEVEL
         value: INFO
+      # Populate an empty DB and keep snapshots refreshed at least every six hours.
+      - key: INGEST_ON_STARTUP
+        value: 'true'
+      - key: INGEST_MAX_AGE_MINUTES
+        value: '360'
       # Update this to your Vercel URL after the web app is deployed.
       - key: API_CORS_ORIGINS
         value: https://evocomb.vercel.app

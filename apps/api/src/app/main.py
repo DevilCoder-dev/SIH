@@ -5,8 +5,10 @@ startup, disposed on shutdown. The OpenAPI schema is served at /api/v1/openapi.j
 which is the source the frontend's TypeScript types are generated from.
 """
 
+import asyncio
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
+from datetime import timedelta
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,6 +21,7 @@ from app.db import session as db_session
 from app.db.redis import create_redis
 from app.db.session import create_engine, create_session_factory
 from app.realtime.websocket import router as ws_router
+from app.services.ingestion_runtime import maintain_fresh_data
 
 settings = get_settings()
 configure_logging(settings.api_log_level)
@@ -28,14 +31,29 @@ log = get_logger("app")
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     engine = create_engine()
-    db_session.session_factory = create_session_factory(engine)
+    session_factory = create_session_factory(engine)
+    db_session.session_factory = session_factory
     redis = create_redis()
     app.state.engine = engine
     app.state.redis = redis
+    ingestion_task: asyncio.Task[object] | None = None
+    if settings.ingest_on_startup:
+        ingestion_task = asyncio.create_task(
+            maintain_fresh_data(
+                session_factory,
+                max_age=timedelta(minutes=settings.ingest_max_age_minutes),
+            ),
+            name="ingestion-scheduler",
+        )
     log.info("startup", env=settings.api_env)
     try:
         yield
     finally:
+        if ingestion_task is not None:
+            if not ingestion_task.done():
+                ingestion_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await ingestion_task
         await redis.aclose()
         await engine.dispose()
         log.info("shutdown")

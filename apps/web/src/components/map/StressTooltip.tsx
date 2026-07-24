@@ -1,7 +1,13 @@
 'use client';
 
-import { esiBand, STRESS_METRIC_LABELS } from '@platform/shared-types';
+import {
+  esiBand,
+  STRESS_LAYER_LABELS,
+  STRESS_METRIC_LABELS,
+  type StressLayerKey,
+} from '@platform/shared-types';
 import type { StressCell } from '@/lib/api/stress';
+import { stressLayerValue } from '@/components/map/layers/stressHexLayer';
 
 export interface HoverInfo {
   x: number;
@@ -13,11 +19,18 @@ const fmt = (v: number | null | undefined) => (v == null ? '—' : Math.round(v)
 
 // Hover card: locality name + ESI band + per-metric scores + confidence.
 // A '—' score means that factor has no data (e.g. noise/density before ESP32 sensors).
-export function StressTooltip({ info }: { info: HoverInfo | null }) {
+export function StressTooltip({
+  info,
+  activeLayer,
+}: {
+  info: HoverInfo | null;
+  activeLayer: StressLayerKey;
+}) {
   if (!info) return null;
   const cell = info.cell;
   const band = esiBand(cell.esi);
   const s = cell.scores;
+  const activeValue = stressLayerValue(cell, activeLayer);
 
   return (
     <div
@@ -26,10 +39,13 @@ export function StressTooltip({ info }: { info: HoverInfo | null }) {
     >
       <div className="font-semibold">{cell.locality ?? 'Unknown area'}</div>
       <div className="mt-0.5">
-        ESI <span className="font-semibold">{Math.round(cell.esi)}</span>/100 · {band.label}
+        {STRESS_LAYER_LABELS[activeLayer]} <span className="font-semibold">{fmt(activeValue)}</span>
+        /100
+        {activeLayer === 'esi' ? ` · ${band.label}` : ''}
       </div>
       <div className="mt-1 text-neutral-300">
-        {STRESS_METRIC_LABELS.noise} {fmt(s.noise)} · {STRESS_METRIC_LABELS.density} {fmt(s.density)}
+        {STRESS_METRIC_LABELS.noise} {fmt(s.noise)} · {STRESS_METRIC_LABELS.density}{' '}
+        {fmt(s.density)}
         <br />
         {STRESS_METRIC_LABELS.heat} {fmt(s.heat)} · {STRESS_METRIC_LABELS.aqi} {fmt(s.aqi)}
         {cell.greenery != null && cell.greenery > 0 && (
