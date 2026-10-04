@@ -7,7 +7,7 @@ import { EVIDENCE, CONFIDENCE_META, type EvidenceCard } from '@/lib/evocomb/evid
 import { EvidenceMarker } from '../ui/EvidenceMarker';
 import { Reveal } from '../ui/Reveal';
 
-// Section 7. The Evidence Layer — five compact, sourced claims. Each opens a
+// Section 7. The Evidence Layer — one compact, sourced fact per signal. Each opens a
 // drawer (Anime.js) with the source detail, DOI and a confidence note.
 export function EvidenceLayer() {
   return (
@@ -19,8 +19,8 @@ export function EvidenceLayer() {
             The evidence, organized.
           </h2>
           <p className="mt-5 text-base leading-relaxed text-white/60">
-            Every health claim above traces to a published source. Open any card for the detail, DOI
-            and how far we trust it.
+            Every claim here traces to a published source. Open any card for the detail, DOI and how
+            far we trust it.
           </p>
         </Reveal>
 
@@ -65,7 +65,7 @@ function EvidenceItem({ card }: { card: EvidenceCard }) {
 
   return (
     <article
-      className="flex flex-col rounded-2xl border bg-white/[0.02] p-6 transition-colors"
+      className="flex flex-col rounded-2xl border bg-[#0a0b0d]/85 p-6 transition-colors"
       style={{ borderColor: open ? `${card.accent}55` : 'rgba(255,255,255,0.09)' }}
     >
       <div className="flex items-start gap-4">

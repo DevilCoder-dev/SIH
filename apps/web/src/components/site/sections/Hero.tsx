@@ -36,15 +36,16 @@ export function Hero() {
           >
             Four signals.
             <br />
-            One city-scale{' '}
+            One global-scale{' '}
             <span className="bg-gradient-to-r from-emerald-300 via-amber-300 to-rose-400 bg-clip-text text-transparent">
               stress layer.
             </span>
           </h1>
 
           <p data-anim className="mt-7 max-w-xl text-pretty text-base leading-relaxed text-white/65 md:text-lg">
-            EvoComb blends noise, crowding, heat and air quality into a single Environmental Stress
-            Index across Delhi NCR — street-level where data allows, honest where it does not.
+            EvoComb blends relative humidity, wind speed, solar radiation and temperature into a
+            single Environmental Stress Index across The Globe — street-level where data allows,
+            honest where it does not.
           </p>
 
           <div data-anim className="mt-9 flex flex-wrap items-center gap-3">
@@ -62,22 +63,6 @@ export function Hero() {
               How it works
             </a>
           </div>
-
-          <dl
-            data-anim
-            className="mt-14 grid max-w-lg grid-cols-3 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/5 font-mono"
-          >
-            {[
-              ['4', 'signals'],
-              ['H3 r8', 'hex grid'],
-              ['hourly', 'refresh'],
-            ].map(([v, l]) => (
-              <div key={l} className="bg-[#0a0b0d]/70 px-4 py-3">
-                <dt className="text-base font-semibold text-white">{v}</dt>
-                <dd className="text-[10px] uppercase tracking-[0.15em] text-white/45">{l}</dd>
-              </div>
-            ))}
-          </dl>
         </div>
       </div>
 

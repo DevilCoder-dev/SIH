@@ -12,7 +12,7 @@ export function FinalCTA() {
         <Reveal>
           <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-white/45">08 · Start</p>
           <h2 className="mt-5 text-balance text-4xl font-semibold leading-[1.05] tracking-tight text-white md:text-6xl">
-            See Delhi NCR as one{' '}
+            See The Globe as one{' '}
             <span className="bg-gradient-to-r from-emerald-300 via-amber-300 to-rose-400 bg-clip-text text-transparent">
               stress layer.
             </span>

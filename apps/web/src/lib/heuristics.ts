@@ -84,6 +84,6 @@ export const GREENERY = {
   label: 'Greenery',
   color: '#27ae60',
   icon: Trees,
-  plain: 'Parks and trees calm a place down — cooler air, less noise.',
+  plain: 'Parks and trees cool a place down and soften the heat around them.',
   how: 'Green areas get a discount on their stress score.',
 };

@@ -2,18 +2,18 @@
 
 import { motion } from 'framer-motion';
 import { esiBand } from '@platform/shared-types';
-import { formatRaw, GREENERY, HEURISTICS } from '@/lib/heuristics';
-import type { StressCell } from '@/lib/api/stress';
-import { useStressCells } from '@/hooks/useStressCells';
-import { HealthRiskPanel } from './HealthRiskPanel';
+import { GREENERY } from '@/lib/heuristics';
+import { SIGNALS } from '@/lib/evocomb/signals';
+import type { MapCell } from '@/lib/map/cells';
+import { useDisplayCells } from '@/hooks/useDisplayCells';
 
 const rgba = (c: readonly number[]) => `rgb(${c[0]},${c[1]},${c[2]})`;
 
 // Greenery relief fraction — mirrors GREENERY_RELIEF in the backend methodology.
 const GREENERY_RELIEF_PCT = 60;
 
-function summarize(cell: StressCell): string {
-  const present = HEURISTICS.filter((h) => cell.scores[h.key] != null);
+function summarize(cell: MapCell): string {
+  const present = SIGNALS.filter((h) => cell.scores[h.key] != null);
   const ranked = [...present].sort(
     (a, b) => (cell.scores[b.key] ?? 0) * b.weight - (cell.scores[a.key] ?? 0) * a.weight,
   );
@@ -28,14 +28,13 @@ function summarize(cell: StressCell): string {
   return s;
 }
 
-export function AreaDetails({ cell }: { cell: StressCell }) {
-  const { data } = useStressCells();
-  const cells = data?.cells ?? [];
+export function AreaDetails({ cell }: { cell: MapCell }) {
+  const { cells, isDemo } = useDisplayCells();
   const avg = cells.length ? cells.reduce((s, c) => s + c.esi, 0) / cells.length : null;
   const diff = avg != null ? Math.round(cell.esi - avg) : null;
 
   const band = esiBand(cell.esi);
-  const localityLabel = cell.locality ?? 'Unknown area';
+  const localityLabel = cell.locality ?? (isDemo ? 'Demo cell (illustrative)' : 'Unknown area');
 
   const compare =
     diff == null
@@ -79,13 +78,15 @@ export function AreaDetails({ cell }: { cell: StressCell }) {
       </p>
 
       <div className="space-y-2.5">
-        {HEURISTICS.map((h) => {
+        {SIGNALS.map((h) => {
           const score = cell.scores[h.key];
           return (
             <div key={h.key}>
               <div className="flex items-baseline justify-between text-xs">
                 <span className="text-card-foreground">{h.label}</span>
-                <span className="font-medium text-card-foreground">{formatRaw(h, score)}</span>
+                <span className="font-medium text-card-foreground">
+                  {score == null ? 'no data' : `${Math.round(score)} / 100`}
+                </span>
               </div>
               <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-muted">
                 <motion.div
@@ -110,11 +111,10 @@ export function AreaDetails({ cell }: { cell: StressCell }) {
         </div>
       )}
 
-      <HealthRiskPanel cell={cell} />
-
       <p className="text-[11px] leading-snug text-muted-foreground">
-        Values are estimates for this ~150&nbsp;m hexagon. Air quality &amp; heat are live;
-        noise &amp; crowding are modeled from roads &amp; places (no live sensors yet).
+        {isDemo
+          ? 'Demo data: these values are illustrative, not measured.'
+          : 'Scores are 0–100 for this hexagon. Temperature comes from the live feed; humidity, wind and solar radiation have no live source yet.'}{' '}
         Confidence {Math.round(cell.confidence * 100)}%.
       </p>
     </motion.div>

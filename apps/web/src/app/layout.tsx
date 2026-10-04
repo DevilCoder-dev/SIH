@@ -14,9 +14,9 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'EvoComb · Environmental Stress Index for Delhi NCR',
+  title: 'EvoComb · Environmental Stress Index for The Globe',
   description:
-    'Four signals — noise, crowding, heat and air quality — blended into one Environmental Stress Index across Delhi NCR. Street-level where data allows, honest where it does not.',
+    'Four signals — relative humidity, wind speed, solar radiation and temperature — blended into one Environmental Stress Index across The Globe. Street-level where data allows, honest where it does not.',
 };
 
 export const viewport: Viewport = {

@@ -12,7 +12,8 @@ components/site/
   Experience.tsx                   client root: smooth-scroll + storyboard + canvas + sections
   StressCanvas.tsx                 fixed WebGL host — lazy-imports Three.js, DPR cap, pause-on-hidden
   StressCanvasFallback.tsx         static SVG hex field for reduced-motion / low-end / no-WebGL
-  SceneHUD.tsx                     technical chrome: coord readout, scene label, ESI legend, scroll rail
+  HexGlobe.tsx                     06 · Map draggable hex globe (lazy lib/webgl/HexGlobeController, SVG fallback)
+  SceneHUD.tsx                     technical chrome: ESI legend, scroll rail
   SiteNav.tsx
   sections/                        Hero · WhatItMeasures · WhyItMatters · Formula · Pipeline ·
                                    MapPreview · EvidenceLayer · FinalCTA · SiteFooter

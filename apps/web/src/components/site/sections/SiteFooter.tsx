@@ -1,6 +1,5 @@
 import Link from 'next/link';
-
-const SOURCES = ['Open-Meteo · AQI', 'MET Norway · heat', 'OpenStreetMap · roads & POIs', 'WHO / GBD · health'];
+import { SIGNALS } from '@/lib/evocomb/signals';
 
 export function SiteFooter() {
   return (
@@ -12,8 +11,8 @@ export function SiteFooter() {
             <span className="font-mono text-sm font-semibold text-white">EvoComb</span>
           </div>
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/50">
-            An open Environmental Stress Index for Delhi NCR — noise, crowding, heat and air quality on
-            one H3 hex grid.
+            An open Environmental Stress Index for The Globe — relative humidity, wind speed, solar
+            radiation and temperature on one H3 hex grid.
           </p>
         </div>
 
@@ -28,10 +27,13 @@ export function SiteFooter() {
         </div>
 
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/40">Data sources</p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/40">Signals</p>
           <ul className="mt-4 space-y-2 font-mono text-[12px] text-white/50">
-            {SOURCES.map((s) => (
-              <li key={s}>{s}</li>
+            {SIGNALS.map((s) => (
+              <li key={s.key} className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full" style={{ background: s.color }} />
+                {s.label} · {s.unit}
+              </li>
             ))}
           </ul>
         </div>

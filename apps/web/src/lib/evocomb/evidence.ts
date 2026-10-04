@@ -1,6 +1,6 @@
-// The Evidence Layer. Five compact, sourced claims that back the project — not
-// a bibliography dump. Every entry maps to a real, published source; the last
-// card is an honest account of EvoComb's own measurement limits.
+// The Evidence Layer. Four compact, sourced facts — one per signal — not a
+// bibliography dump. Every entry maps to a real, published source, and each
+// claim stays within what that source's abstract or summary states.
 //
 // `confidence` drives both the label and the small meter:
 //   high       — strong, replicated evidence
@@ -27,83 +27,76 @@ export interface EvidenceCard {
 
 export const EVIDENCE: EvidenceCard[] = [
   {
-    id: 'noise-cv',
-    marker: 'wave',
-    accent: '#e67e22',
-    claim: 'Every +10 dB of road-traffic noise raises ischaemic heart-disease risk by about 8%.',
-    source: 'Environmental Noise Guidelines for the European Region',
-    year: 2018,
-    institution: 'WHO Regional Office for Europe',
-    confidence: 'high',
-    note: 'Consistent exposure–response across European cohorts above ~50 dB Lden.',
-    detail:
-      'The WHO guideline pools long-term cohort evidence linking chronic road-traffic noise to hypertension and ischaemic heart disease, and sets a 53 dB Lden recommendation. Mechanism (stress-hormone and blood-pressure pathways) is detailed in Münzel et al., JACC 2018.',
-    link: 'https://www.who.int/europe/publications/i/item/9789289053563',
-    doi: '10.1016/j.jacc.2017.12.015',
-  },
-  {
-    id: 'air-mortality',
-    marker: 'haze',
-    accent: '#7f8c8d',
-    claim: '1.67 million deaths in India were attributable to air pollution in 2019 — 17.8% of all deaths.',
-    source: 'Health and economic impact of air pollution in the states of India, GBD 2019',
-    year: 2021,
-    institution: 'The Lancet Planetary Health',
-    confidence: 'high',
-    note: 'Modelled attributable burden; exposure estimates carry spatial uncertainty.',
-    detail:
-      'The Global Burden of Disease 2019 India analysis attributes 1.67M deaths and a measurable GDP loss to ambient and household air pollution, with PM2.5 the dominant driver of cardiopulmonary mortality.',
-    link: 'https://pubmed.ncbi.nlm.nih.gov/33357500/',
-    doi: '10.1016/S2542-5196(20)30298-9',
-  },
-  {
-    id: 'heat-deaths',
+    id: 'temperature-warming',
     marker: 'heat',
     accent: '#e74c3c',
-    claim: 'The 2003 European heatwave caused more than 70,000 excess deaths.',
-    source: 'Death toll exceeded 70,000 in Europe during the summer of 2003',
-    year: 2008,
-    institution: 'Comptes Rendus Biologies',
-    confidence: 'high',
-    note: 'Event total is firm; urban heat-island amplification varies by city fabric.',
-    detail:
-      'Robine et al. reconstructed national mortality across 16 countries and found >70,000 excess deaths, concentrated in elderly and urban populations where concrete and low greenery intensify heat exposure.',
-    link: 'https://doi.org/10.1016/j.crvi.2007.12.001',
-    doi: '10.1016/j.crvi.2007.12.001',
-  },
-  {
-    id: 'pm25-guideline',
-    marker: 'threshold',
-    accent: '#9b59b6',
-    claim: 'WHO sets the safe annual PM2.5 limit at 5 µg/m³. Delhi routinely runs many times higher.',
-    source: 'Global Air Quality Guidelines',
+    claim:
+      'Global surface temperature in 2011–2020 was 1.09 °C above 1850–1900 — and land warmed faster, by 1.59 °C.',
+    source: 'Climate Change 2021: The Physical Science Basis — Summary for Policymakers',
     year: 2021,
-    institution: 'World Health Organization',
-    confidence: 'moderate',
-    note: 'Guideline value is firm; local exceedance depends on station and season.',
+    institution: 'IPCC Working Group I',
+    confidence: 'high',
+    note: 'Assessed across multiple independent datasets; likely range 0.95–1.20 °C.',
     detail:
-      'The 2021 WHO guideline lowered the annual PM2.5 limit from 10 to 5 µg/m³. Delhi NCR winter averages frequently exceed it by an order of magnitude, which is why EvoComb treats AQI as a heavily weighted signal.',
-    link: 'https://www.who.int/publications/i/item/9789240034228',
+      'The IPCC AR6 assessment puts the 2011–2020 global mean 1.09 °C above the pre-industrial baseline, with land at 1.59 °C and ocean at 0.88 °C. Because people live on land, the warming they experience runs well above the global average.',
+    link: 'https://www.ipcc.ch/report/ar6/wg1/chapter/summary-for-policymakers/',
+    doi: '10.1017/9781009157896.001',
   },
   {
-    id: 'exposure-limits',
-    marker: 'grid',
-    accent: '#27ae60',
-    claim: 'Coarse, city-scale exposure data hides street-level extremes — so EvoComb states where it is modelled.',
-    source: 'Mortality risk attributable to high and low ambient temperature (multicountry study)',
-    year: 2015,
-    institution: 'The Lancet',
-    confidence: 'limitation',
-    note: 'Noise and crowd layers are OSM-derived proxies; AQI and heat are ~km-grid models interpolated to cells.',
+    id: 'humidity-drying',
+    marker: 'haze',
+    accent: '#1abc9c',
+    claim:
+      'Observations show near-surface air over land drying faster than climate models project — relative humidity is falling.',
+    source:
+      'A drier than expected future, supported by near-surface relative humidity observations',
+    year: 2023,
+    institution: 'Science Advances',
+    confidence: 'moderate',
+    note: 'Observation-constrained projections; regional strength varies and models disagree.',
     detail:
-      'Gasparrini et al. show environmental–mortality risk varies sharply with local exposure, which km-scale grids cannot resolve. EvoComb is street-level only where sensor data exists and labels every modelled cell as such, rather than implying precision it does not have.',
-    link: 'https://doi.org/10.1016/S0140-6736(14)62114-0',
-    doi: '10.1016/S0140-6736(14)62114-0',
+      'Douville and Willett constrain 21st-century projections with quality-controlled temperature and humidity observations and find an inevitable continental drying, strongest in the northern mid-latitudes, where aerosols had masked the trend until the late 1980s.',
+    link: 'https://doi.org/10.1126/sciadv.ade6253',
+    doi: '10.1126/sciadv.ade6253',
+  },
+  {
+    id: 'wind-stilling',
+    marker: 'wave',
+    accent: '#5dade2',
+    claim:
+      'Land wind speeds fell about 8% from ~1980 to 2010, then reversed — lifting potential wind energy by 17% over 2010–2017.',
+    source:
+      'A reversal in global terrestrial stilling and its implications for wind energy production',
+    year: 2019,
+    institution: 'Nature Climate Change',
+    confidence: 'moderate',
+    note: 'Station-based and concentrated in northern mid-latitudes; trends vary by region.',
+    detail:
+      'Zeng et al. analyse in-situ station records worldwide and show the long "terrestrial stilling" reversed around 2010. They link the decadal swings to internal ocean–atmosphere oscillations rather than vegetation growth or urbanisation.',
+    link: 'https://doi.org/10.1038/s41558-019-0622-6',
+    doi: '10.1038/s41558-019-0622-6',
+  },
+  {
+    id: 'solar-dimming',
+    marker: 'threshold',
+    accent: '#f1c40f',
+    claim:
+      'Sunlight reaching land declined until about 1990 ("global dimming"), then turned into widespread brightening.',
+    source: "From dimming to brightening: decadal changes in solar radiation at Earth's surface",
+    year: 2005,
+    institution: 'Science',
+    confidence: 'high',
+    note: 'Observations mainly from the Northern Hemisphere; regional timing differs.',
+    detail:
+      'Wild et al. show the surface dimming seen in records up to 1990 did not persist; a widespread brightening has been observed since the late 1980s, reconcilable with changes in cloudiness and atmospheric transmission.',
+    link: 'https://doi.org/10.1126/science.1103215',
+    doi: '10.1126/science.1103215',
   },
 ];
 
-export const CONFIDENCE_META: Record<Confidence, { label: string; level: number; color: string }> = {
-  high: { label: 'High confidence', level: 0.92, color: '#27ae60' },
-  moderate: { label: 'Moderate confidence', level: 0.66, color: '#f1c40f' },
-  limitation: { label: 'Known limitation', level: 0.4, color: '#7f8c8d' },
-};
+export const CONFIDENCE_META: Record<Confidence, { label: string; level: number; color: string }> =
+  {
+    high: { label: 'High confidence', level: 0.92, color: '#27ae60' },
+    moderate: { label: 'Moderate confidence', level: 0.66, color: '#f1c40f' },
+    limitation: { label: 'Known limitation', level: 0.4, color: '#7f8c8d' },
+  };

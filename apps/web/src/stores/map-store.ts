@@ -6,7 +6,7 @@ import {
   type StressLayerKey,
 } from '@platform/shared-types';
 import { MAP_DEFAULTS } from '@/lib/map/config';
-import type { StressCell } from '@/lib/api/stress';
+import type { MapCell } from '@/lib/map/cells';
 
 // Client/UI state for the map: viewport, current bounds (drives bbox-bounded queries),
 // and layer visibility. Server data lives in TanStack Query, never here.
@@ -29,15 +29,18 @@ interface MapState {
   bounds: Bounds | null;
   visibleLayers: Record<MapLayerId, boolean>;
   activeStressLayer: StressLayerKey;
-  selectedCell: StressCell | null;
+  selectedCell: MapCell | null;
   explainerOpen: boolean;
+  /** Sticky: set when a cell request fails, cleared only when one succeeds. */
+  liveUnavailable: boolean;
   setViewport: (viewport: Viewport) => void;
   setBounds: (bounds: Bounds) => void;
   toggleLayer: (id: MapLayerId) => void;
   setActiveStressLayer: (layer: StressLayerKey) => void;
-  setSelectedCell: (cell: StressCell | null) => void;
+  setSelectedCell: (cell: MapCell | null) => void;
   toggleExplainer: () => void;
   setExplainerOpen: (open: boolean) => void;
+  setLiveUnavailable: (unavailable: boolean) => void;
 }
 
 export const useMapStore = create<MapState>((set) => ({
@@ -49,6 +52,7 @@ export const useMapStore = create<MapState>((set) => ({
   bounds: null,
   selectedCell: null,
   explainerOpen: false,
+  liveUnavailable: false,
   visibleLayers: {
     [MAP_LAYER_IDS.base]: true,
     [MAP_LAYER_IDS.heatmap]: false,
@@ -66,4 +70,5 @@ export const useMapStore = create<MapState>((set) => ({
   setSelectedCell: (cell) => set({ selectedCell: cell }),
   toggleExplainer: () => set((state) => ({ explainerOpen: !state.explainerOpen })),
   setExplainerOpen: (open) => set({ explainerOpen: open }),
+  setLiveUnavailable: (liveUnavailable) => set({ liveUnavailable }),
 }));

@@ -6,6 +6,21 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 let registered = false;
+// The live Lenis instance (null under reduced motion), so in-page links can
+// scroll through it instead of jumping past the smoothed position.
+let activeLenis: Lenis | null = null;
+
+/**
+ * Scrolls to an in-page `#id` anchor: eased through Lenis when it is running,
+ * a native jump otherwise. Returns false if the target doesn't exist.
+ */
+export function scrollToAnchor(hash: string): boolean {
+  const el = document.getElementById(hash.replace(/^#/, ''));
+  if (!el) return false;
+  if (activeLenis) activeLenis.scrollTo(el);
+  else el.scrollIntoView();
+  return true;
+}
 
 /**
  * Sets up Lenis smooth scrolling and drives GSAP's ScrollTrigger from it, so
@@ -33,6 +48,7 @@ export function useSmoothScroll(reducedMotion: boolean) {
     });
 
     lenis.on('scroll', ScrollTrigger.update);
+    activeLenis = lenis;
 
     const onRaf = (time: number) => lenis.raf(time * 1000);
     gsap.ticker.add(onRaf);
@@ -42,6 +58,7 @@ export function useSmoothScroll(reducedMotion: boolean) {
 
     return () => {
       gsap.ticker.remove(onRaf);
+      if (activeLenis === lenis) activeLenis = null;
       lenis.destroy();
       ScrollTrigger.getAll().forEach((t) => t.kill());
     };
