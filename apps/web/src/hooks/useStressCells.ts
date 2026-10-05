@@ -17,7 +17,7 @@ export function useStressCells() {
         ? [round(bounds.minLng), round(bounds.minLat), round(bounds.maxLng), round(bounds.maxLat)]
         : null,
     ],
-    queryFn: () => fetchStressCells(bounds!),
+    queryFn: ({ signal }) => fetchStressCells(bounds!, signal),
     enabled: bounds !== null,
     placeholderData: keepPreviousData,
     // During first-run ingestion the API intentionally returns an empty collection.

@@ -17,7 +17,7 @@ export function useDisplayCells(): {
   isDemo: boolean;
   isLoading: boolean;
 } {
-  const { data, isLoading, isError } = useStressCells();
+  const { data, isLoading, isError, failureCount } = useStressCells();
   const bounds = useMapStore((s) => s.bounds);
   const zoom = useMapStore((s) => s.viewport.zoom);
   const liveUnavailable = useMapStore((s) => s.liveUnavailable);
@@ -25,11 +25,12 @@ export function useDisplayCells(): {
 
   // TanStack resets a never-successful query to "pending" on every refetch, so
   // `isError` blinks off during retries (each pan, each panel open). Track failure
-  // in the shared store instead: set on error, cleared only by a real success.
+  // in the shared store instead: set on the first failed attempt (not after every
+  // retry, which against a hanging host takes ~40 s), cleared only by a real success.
   useEffect(() => {
-    if (isError) setLiveUnavailable(true);
+    if (isError || failureCount > 0) setLiveUnavailable(true);
     else if (data && data.cells.length > 0) setLiveUnavailable(false);
-  }, [isError, data, setLiveUnavailable]);
+  }, [isError, failureCount, data, setLiveUnavailable]);
 
   const useDemo = liveUnavailable || isError || (data !== undefined && data.cells.length === 0);
   const live = useMemo(() => data?.cells.map(fromApiCell), [data]);
